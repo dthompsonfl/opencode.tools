@@ -42,17 +42,10 @@ const App_1 = require("./tui/App");
  * Replaces the previous readline-based implementation with a React Ink TUI.
  */
 async function main() {
-    console.log('\n╔════════════════════════════════════════════╗');
-    console.log('║           OPENCODE TOOLS TUI               ║');
-    console.log('╚════════════════════════════════════════════╝');
-    console.log('\nWelcome! Select a tool to begin:\n');
-    const tools = (0, index_1.registerTUITools)();
-    const readline = await Promise.resolve().then(() => __importStar(require('readline')));
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-    const ask = (query) => new Promise(resolve => rl.question(query, resolve));
+    // Clear the console for a clean TUI start
+    console.clear();
+    // Render the Ink app
+    const { waitUntilExit } = (0, ink_1.render)(React.createElement(App_1.App));
     try {
         await waitUntilExit();
     }

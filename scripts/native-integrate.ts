@@ -24,6 +24,9 @@ const logger = {
   warn: (msg: string) => console.warn(`[WARN] ${msg}`)
 };
 
+// Check for opt-in flag - integration only runs with explicit consent
+const AUTO_INTEGRATE = process.env.OPENCODE_AUTO_INTEGRATE === '1';
+
 interface IntegrationConfig {
   opencodeConfigDir: string;
   systemPromptPath: string;
@@ -234,6 +237,16 @@ function displayWelcomeMessage(): void {
 function main(): void {
   logger.info('OpenCode Tools Native Integration');
   logger.info('=================================\n');
+
+  // Check for opt-in consent
+  if (!AUTO_INTEGRATE) {
+    logger.info('OpenCode auto-integration is disabled by default for safety.');
+    logger.info('To enable automatic integration, set OPENCODE_AUTO_INTEGRATE=1');
+    logger.info('Or run: opencode-tools integrate (for manual integration)');
+    logger.info('');
+    logger.info('No changes have been made to your system.');
+    return;
+  }
 
   try {
     // Setup global CLI

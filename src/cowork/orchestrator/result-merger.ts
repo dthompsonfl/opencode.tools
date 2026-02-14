@@ -93,7 +93,7 @@ export class ResultMerger {
     // Collect and deduplicate tools
     const allTools = sortedResults
       .flatMap(r => r.metadata.toolsUsed || []);
-    const totalToolsUsed = [...new Set(allTools)];
+    const totalToolsUsed = Array.from(new Set(allTools));
 
     return {
       output: mergedOutput,
@@ -122,7 +122,7 @@ export class ResultMerger {
       agentName: 'merged',
       output: merged.output,
       metadata: {
-        runId: [...new Set([a.metadata.runId, b.metadata.runId])].join(','),
+        runId: Array.from(new Set([a.metadata.runId, b.metadata.runId])).join(','),
         timestamp: merged.metadata.timestamp,
         toolsUsed: merged.metadata.totalToolsUsed,
         success: merged.metadata.allSucceeded
