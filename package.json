@@ -31,7 +31,7 @@
     "lint:fix": "eslint src/**/*.ts agents/**/*.ts tests/**/*.ts --fix",
     "verify:system": "ts-node scripts/verify-full-system.ts",
     "run:delivery": "ts-node scripts/run-delivery.ts",
-    "postinstall": "npm run build && node dist/scripts/post-install.js",
+    "postinstall": "node dist/scripts/post-install.js || echo 'Run opencode-tools integrate for full setup'",
     "verify:mcp": "ts-node scripts/verify-mcp-tools.ts",
     "verify:global": "ts-node scripts/research-global-opencode.ts",
     "integrate": "ts-node scripts/native-integrate.ts",

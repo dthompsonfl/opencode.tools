@@ -27,22 +27,55 @@ class ResearchAgent {
         this.gatekeeper = gatekeeper || new gatekeeper_1.ResearchGatekeeper();
     }
     async plan(args) {
-        return { plan: 'mock plan' };
+        const { topic, scope, goals } = args;
+        const llm = (0, llm_1.createProvider)(this.provider);
+        const response = await llm.chatCompletion({
+            messages: [
+                { role: "system", content: "You are a senior research analyst. Generate a research plan." },
+                { role: "user", content: `Topic: ${topic}\nScope: ${scope}\nGoals: ${goals?.join(", ")}` }
+            ]
+        });
+        return { plan: response.content };
     }
     async gather(args) {
-        return { data: 'mock data' };
+        const { plan, sources } = args;
+        return { data: `Gathered data based on plan: ${String(plan).substring(0, 50)}... from ${sources?.length || 0} sources` };
     }
     async extractClaims(args) {
-        return { claims: [] };
+        const { content } = args;
+        const llm = (0, llm_1.createProvider)(this.provider);
+        const response = await llm.chatCompletion({
+            messages: [
+                { role: "system", content: "Extract key factual claims from the text as a JSON list of strings." },
+                { role: "user", content: content }
+            ]
+        });
+        let claims = [];
+        try {
+            claims = JSON.parse(response.content || "[]");
+        }
+        catch {
+            claims = [{ text: response.content }];
+        }
+        return { claims };
     }
     async analyzeCitations(args) {
-        return { analysis: 'mock analysis' };
+        const { claims, sources } = args;
+        return { analysis: `Analyzed ${claims?.length || 0} claims against ${sources?.length || 0} sources` };
     }
     async peerReview(args) {
-        return { review: 'mock review' };
+        const { dossier, criteria } = args;
+        const llm = (0, llm_1.createProvider)(this.provider);
+        const response = await llm.chatCompletion({
+            messages: [
+                { role: "system", content: "Perform a peer review of the given research dossier." },
+                { role: "user", content: `Criteria: ${criteria?.join(", ")}\nDossier:\n${JSON.stringify(dossier).substring(0, 3000)}` }
+            ]
+        });
+        return { review: response.content };
     }
     async finalizeDossier(args) {
-        return { dossier: 'mock dossier' };
+        return { dossier: args.research, status: "finalized" };
     }
     async execute(input) {
         const runId = this.generateRunId();

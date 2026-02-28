@@ -1,7 +1,7 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface SecurityFinding {
   id: string;
@@ -41,7 +41,7 @@ export class SemgrepScanner implements SecurityScanner {
 
   async scan(options: { target: string }): Promise<ScanResult> {
     try {
-      const { stdout } = await execAsync(`semgrep scan ${options.target} --json --config=auto`);
+      const { stdout } = await execFileAsync("semgrep", ["scan", options.target, "--json", "--config=auto"]);
       const results = JSON.parse(stdout);
 
       return {
@@ -83,7 +83,7 @@ export class GitLeaksScanner implements SecurityScanner {
 
   async scan(options: { target: string }): Promise<ScanResult> {
     try {
-      const { stdout } = await execAsync(`gitleaks detect ${options.target} --verbose --json`);
+      const { stdout } = await execFileAsync("gitleaks", ["detect", options.target, "--verbose", "--json"]);
       const results = JSON.parse(stdout);
 
       return {
@@ -113,7 +113,7 @@ export class SnykScanner implements SecurityScanner {
 
   async scan(options: { target: string }): Promise<ScanResult> {
     try {
-      const { stdout } = await execAsync(`snyk test ${options.target} --json`);
+      const { stdout } = await execFileAsync("snyk", ["test", options.target, "--json"]);
       const results = JSON.parse(stdout);
 
       const findings = results.vulnerabilities?.map((v: any) => ({
@@ -149,7 +149,7 @@ export class CheckovScanner implements SecurityScanner {
 
   async scan(options: { target: string }): Promise<ScanResult> {
     try {
-      const { stdout } = await execAsync(`checkov -d ${options.target} --output json`);
+      const { stdout } = await execFileAsync("checkov", ["-d", options.target, "--output", "json"]);
       const results = JSON.parse(stdout);
 
       const findings: SecurityFinding[] = [];
@@ -189,7 +189,7 @@ export class TrivyScanner implements SecurityScanner {
 
   async scan(options: { target: string }): Promise<ScanResult> {
     try {
-      const { stdout } = await execAsync(`trivy image ${options.target} --format json`);
+      const { stdout } = await execFileAsync("trivy", ["image", options.target, "--format", "json"]);
       const results = JSON.parse(stdout);
 
       const findings: SecurityFinding[] = [];

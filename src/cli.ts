@@ -28,7 +28,7 @@ import { FoundryOrchestrator, createFoundryExecutionRequest } from './foundry/or
 import { createWarmedUpBridge } from './foundry/cowork-bridge';
 import type { FoundryExecutionRequest } from './foundry/contracts';
 
-const VERSION = '1.0.0';
+const VERSION = process.env.npm_package_version || '1.0.0';
 
 interface CliDependencies {
   createDocumentationAgent: () => DocumentationAgent;

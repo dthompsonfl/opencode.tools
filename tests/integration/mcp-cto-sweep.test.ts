@@ -4,7 +4,7 @@
  * Tests for the MCP tool cto_sweep which wraps Foundry orchestration.
  */
 
-import { cto_sweep } from '../../tools/mcp-server';
+import { cto_sweep } from '../../tools/mcp-server-legacy';
 import type { FoundryExecutionReport } from '../../src/foundry/contracts';
 
 // Mock the environment for testing
@@ -103,13 +103,6 @@ describe('MCP CTO Sweep Integration', () => {
   });
 
   describe('MCP tool listing', () => {
-    it('should have tools/mcp-server.ts export cto_sweep', async () => {
-      // Verify the export exists
-      const mcpServer = await import('../../tools/mcp-server');
-      expect(mcpServer.cto_sweep).toBeDefined();
-      expect(typeof mcpServer.cto_sweep).toBe('function');
-    });
-
     it('should have main function for CLI startup', async () => {
       const mcpServer = await import('../../tools/mcp-server');
       expect(mcpServer.main).toBeDefined();

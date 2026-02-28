@@ -15,33 +15,28 @@ import {
   isJsonRpcNotification
 } from './mcp/defs';
 import { TOOL_DEFS, getToolHandler } from './mcp/registry';
-import { cto_sweep } from './mcp-server-legacy';
+import { z } from 'zod';
 
 // Set MCP mode and patch console to prevent stdout pollution
 if (typeof process !== 'undefined') {
   process.env.OPENCODE_MCP = '1';
   
   // Patch console methods to write to stderr instead of stdout
-  const originalLog = console.log;
-  const originalInfo = console.info;
-  const originalDebug = console.debug;
-  const originalWarn = console.warn;
-  
-  console.log = (...args) => originalLog.call(console, ...args.map(arg => 
+  console.log = (...args) => process.stderr.write(args.map(arg =>
     typeof arg === 'string' ? arg : JSON.stringify(arg, null, 2)
-  ));
+  ).join(' ') + '\n');
   
-  console.info = (...args) => originalInfo.call(console, ...args.map(arg => 
+  console.info = (...args) => process.stderr.write(args.map(arg =>
     typeof arg === 'string' ? arg : JSON.stringify(arg, null, 2)
-  ));
+  ).join(' ') + '\n');
   
-  console.debug = (...args) => originalDebug.call(console, ...args.map(arg => 
+  console.debug = (...args) => process.stderr.write(args.map(arg =>
     typeof arg === 'string' ? arg : JSON.stringify(arg, null, 2)
-  ));
+  ).join(' ') + '\n');
   
-  console.warn = (...args) => originalWarn.call(console, ...args.map(arg => 
+  console.warn = (...args) => process.stderr.write(args.map(arg =>
     typeof arg === 'string' ? arg : JSON.stringify(arg, null, 2)
-  ));
+  ).join(' ') + '\n');
   
   // Keep console.error as-is (already writes to stderr)
 }
@@ -123,6 +118,40 @@ async function handleToolsCall(params: unknown, id: string | number): Promise<Js
     return jsonRpcErr(id, -32602, `Tool not found: ${toolCall.name}`);
   }
   
+  // Basic validation mapping JSON Schema subset to Zod subset
+  const toolDef = TOOL_DEFS.find(t => t.name === toolCall.name);
+  if (toolDef && toolDef.inputSchema) {
+    const zodSchemaObj: Record<string, z.ZodTypeAny> = {};
+    if (toolDef.inputSchema.properties) {
+      for (const [key, prop] of Object.entries(toolDef.inputSchema.properties)) {
+        let zodType: z.ZodTypeAny = z.any();
+        if ((prop as any).type === 'string') zodType = z.string();
+        else if ((prop as any).type === 'number') zodType = z.number();
+        else if ((prop as any).type === 'boolean') zodType = z.boolean();
+        else if ((prop as any).type === 'array') zodType = z.array(z.any());
+        else if ((prop as any).type === 'object') zodType = z.record(z.string(), z.any());
+
+        if (!toolDef.inputSchema.required || !toolDef.inputSchema.required.includes(key)) {
+          zodType = zodType.optional();
+        }
+        zodSchemaObj[key] = zodType;
+      }
+    }
+
+    let zodSchema: z.ZodTypeAny = z.object(zodSchemaObj);
+    if (toolDef.inputSchema.additionalProperties) {
+      zodSchema = z.object(zodSchemaObj).catchall(z.any());
+    } else {
+      zodSchema = z.object(zodSchemaObj).strict();
+    }
+
+    try {
+      zodSchema.parse(toolCall.arguments || {});
+    } catch (validationError: any) {
+      return jsonRpcErr(id, -32602, `Invalid params: ${validationError.message}`);
+    }
+  }
+
   try {
     const result = await handler(toolCall.arguments || {});
     return jsonRpcOk(id, toMcpContent(result));
@@ -154,7 +183,7 @@ export async function main(): Promise<void> {
   const stdout = process.stdout;
   
   let buffer = '';
-  let requestId = 0;
+  const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB limit for the buffer
   
   // Set up stdin for line-by-line reading
   stdin.setEncoding('utf8');
@@ -162,6 +191,14 @@ export async function main(): Promise<void> {
   
   stdin.on('data', async (chunk: string) => {
     buffer += chunk;
+
+    if (buffer.length > MAX_BUFFER_SIZE) {
+      // Buffer too large, prevent memory exhaustion
+      const response = jsonRpcErr(null, -32700, 'Parse error: Request too large');
+      stdout.write(JSON.stringify(response) + '\n');
+      buffer = '';
+      return;
+    }
     
     // Process complete lines
     const lines = buffer.split('\n');
@@ -184,13 +221,13 @@ export async function main(): Promise<void> {
           
         } else {
           // Invalid message format
-          const response = jsonRpcErr(++requestId, -32700, 'Parse error');
+          const response = jsonRpcErr(null, -32700, 'Parse error');
           stdout.write(JSON.stringify(response) + '\n');
         }
         
       } catch (error) {
         // JSON parse error or other error
-        const response = jsonRpcErr(++requestId, -32700, error instanceof Error ? error.message : 'Parse error');
+        const response = jsonRpcErr(null, -32700, error instanceof Error ? error.message : 'Parse error');
         stdout.write(JSON.stringify(response) + '\n');
       }
     }
@@ -216,5 +253,3 @@ export async function main(): Promise<void> {
     process.exit(0);
   });
 }
-
-export { cto_sweep };

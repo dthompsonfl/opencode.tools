@@ -1,5 +1,8 @@
+import { SemgrepScanner as RealSemgrepScanner } from '../../foundry/foundry/security/scanners';
+
 export class SemgrepScanner {
   scan(target: string, rules: string[]): Promise<any> {
-    return Promise.resolve({ findings: [] });
+    const scanner = new RealSemgrepScanner();
+    return scanner.scan({ target });
   }
 }

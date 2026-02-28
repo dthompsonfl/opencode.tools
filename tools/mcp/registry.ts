@@ -453,103 +453,107 @@ export const TOOL_HANDLERS: Record<string, (args: any) => Promise<any>> = {
 };
 
 // Generate aliases
+export const EXPLICIT_ALIASES: Record<string, string> = {
+  // Existing MCP server names
+  'cto_sweep': 'cto_sweep',
+  'foundry_status': 'foundryStatus',
+  'foundry_health': 'foundryHealth',
+  'cowork_list': 'coworkList',
+  'cowork_run': 'coworkRun',
+  'cowork_spawn': 'coworkSpawn',
+  
+  // Scripts/native-integrate.ts names
+  'search_with_retry': 'searchWithRetry',
+  'search_for_facts': 'searchForFacts',
+  'rate_limit': 'enforceRateLimit',
+  'source_normalize': 'normalizeSource',
+  'audit_log': 'logToolCall',
+  'audit_replay': 'replayRun',
+  'audit_check_reproducibility': 'checkReproducibility',
+  'research_extract_claims': 'researchClaimsExtract',
+  'research_analyze_citations': 'researchCitationsAnalyze',
+  'research_finalize': 'researchDossierFinalize',
+  'discovery_start_session': 'startSession',
+  'discovery_export_session': 'exportSession',
+  'docs_generate_prd': 'generatePRD',
+  'docs_generate_sow': 'generateSOW',
+  'arch_generate': 'generateArchitecture',
+  'backlog_generate': 'generateBacklog',
+  'codegen_scaffold': 'scaffold',
+  'codegen_feature': 'generateFeature',
+  'codegen_tests': 'codegenGenerateTests',
+  'qa_generate_testplan': 'generateTestPlan',
+  'qa_generate_risk_matrix': 'generateRiskMatrix',
+  'qa_static_analysis': 'runStaticAnalysis',
+  'qa_generate_tests': 'qaGenerateTests',
+  'qa_peer_review': 'qaPeerReview',
+  'proposal_generate': 'generateProposal',
+  'proposal_peer_review': 'proposalPeerReview',
+  'proposal_export': 'packageExport',
+  'delivery_generate_runbook': 'generateRunbook',
+  'delivery_generate_nginx': 'generateNginxConfig',
+  'delivery_smoketest': 'runSmoketest',
+  'delivery_handoff': 'packageHandoff',
+  'documents_docx': 'generateDOCX',
+  'documents_xlsx': 'generateXLSX',
+  'documents_pptx': 'generatePPTX',
+  'documents_csv': 'generateCSV',
+  'documents_md': 'generateMarkdown',
+  'ci_verify': 'ciVerify',
+  
+  // opencode.json dotted/hyphen aliases
+  'arch.generate': 'generateArchitecture',
+  'backlog.generate': 'generateBacklog',
+  'docs.prd.generate': 'generatePRD',
+  'docs.sow.generate': 'generateSOW',
+  'codegen.scaffold': 'scaffold',
+  'codegen.feature': 'generateFeature',
+  'codegen.tests': 'codegenGenerateTests',
+  'qa.testplan.generate': 'generateTestPlan',
+  'qa.risk_matrix.generate': 'generateRiskMatrix',
+  'qa.static.run': 'runStaticAnalysis',
+  'qa.peer_review': 'qaPeerReview',
+  'proposal.generate': 'generateProposal',
+  'proposal.peer_review': 'proposalPeerReview',
+  'proposal.package.export': 'packageExport',
+  'delivery.runbook.generate': 'generateRunbook',
+  'delivery.nginx.generate': 'generateNginxConfig',
+  'delivery.smoketest.run': 'runSmoketest',
+  'delivery.handoff.package': 'packageHandoff',
+  'documents.docx.generate': 'generateDOCX',
+  'documents.xlsx.generate': 'generateXLSX',
+  'documents.pptx.generate': 'generatePPTX',
+  'documents.csv.generate': 'generateCSV',
+  'documents.md.generate': 'generateMarkdown',
+  'ci.verify': 'ciVerify',
+  'rate-limit': 'enforceRateLimit',
+  'source-normalize': 'normalizeSource',
+  'audit_logToolCall': 'logToolCall',
+  'audit.logToolCall': 'logToolCall',
+  'audit_replayRun': 'replayRun',
+  'audit.replayRun': 'replayRun',
+  'audit_checkReproducibility': 'checkReproducibility',
+  'audit.checkReproducibility': 'checkReproducibility',
+  'discovery.session.export': 'exportSession',
+  'discovery_session_export': 'exportSession',
+  'research.plan': 'researchPlan',
+  'research.gather': 'researchGather',
+  'research.claims.extract': 'researchClaimsExtract',
+  'research_claims_extract': 'researchClaimsExtract',
+  'research.citations.analyze': 'researchCitationsAnalyze',
+  'research_citations_analyze': 'researchCitationsAnalyze',
+  'research.dossier.finalize': 'researchDossierFinalize',
+  'research_dossier_finalize': 'researchDossierFinalize'
+};
+
 function generateAliases(): ToolDefinition[] {
   const aliases: ToolDefinition[] = [];
   
-  // Existing MCP server names
-  const existingMcpAliases = [
-    { from: 'cto_sweep', to: 'cto_sweep' },
-    { from: 'foundry_status', to: 'foundryStatus' },
-    { from: 'foundry_health', to: 'foundryHealth' },
-    { from: 'cowork_list', to: 'coworkList' },
-    { from: 'cowork_run', to: 'coworkRun' },
-    { from: 'cowork_spawn', to: 'coworkSpawn' }
-  ];
-  
-  // Scripts/native-integrate.ts names
-  const scriptAliases = [
-    { from: 'search_with_retry', to: 'searchWithRetry' },
-    { from: 'search_for_facts', to: 'searchForFacts' },
-    { from: 'rate_limit', to: 'enforceRateLimit' },
-    { from: 'source_normalize', to: 'normalizeSource' },
-    { from: 'audit_log', to: 'logToolCall' },
-    { from: 'audit_replay', to: 'replayRun' },
-    { from: 'audit_check_reproducibility', to: 'checkReproducibility' },
-    { from: 'research_extract_claims', to: 'researchClaimsExtract' },
-    { from: 'research_analyze_citations', to: 'researchCitationsAnalyze' },
-    { from: 'research_finalize', to: 'researchDossierFinalize' },
-    { from: 'discovery_start_session', to: 'startSession' },
-    { from: 'discovery_export_session', to: 'exportSession' },
-    { from: 'docs_generate_prd', to: 'generatePRD' },
-    { from: 'docs_generate_sow', to: 'generateSOW' },
-    { from: 'arch_generate', to: 'generateArchitecture' },
-    { from: 'backlog_generate', to: 'generateBacklog' },
-    { from: 'codegen_scaffold', to: 'scaffold' },
-    { from: 'codegen_feature', to: 'generateFeature' },
-    { from: 'codegen_tests', to: 'codegenGenerateTests' },
-    { from: 'qa_generate_testplan', to: 'generateTestPlan' },
-    { from: 'qa_generate_risk_matrix', to: 'generateRiskMatrix' },
-    { from: 'qa_static_analysis', to: 'runStaticAnalysis' },
-    { from: 'qa_generate_tests', to: 'qaGenerateTests' },
-    { from: 'qa_peer_review', to: 'qaPeerReview' },
-    { from: 'proposal_generate', to: 'generateProposal' },
-    { from: 'proposal_peer_review', to: 'proposalPeerReview' },
-    { from: 'proposal_export', to: 'packageExport' },
-    { from: 'delivery_generate_runbook', to: 'generateRunbook' },
-    { from: 'delivery_generate_nginx', to: 'generateNginxConfig' },
-    { from: 'delivery_smoketest', to: 'runSmoketest' },
-    { from: 'delivery_handoff', to: 'packageHandoff' },
-    { from: 'documents_docx', to: 'generateDOCX' },
-    { from: 'documents_xlsx', to: 'generateXLSX' },
-    { from: 'documents_pptx', to: 'generatePPTX' },
-    { from: 'documents_csv', to: 'generateCSV' },
-    { from: 'documents_md', to: 'generateMarkdown' },
-    { from: 'ci_verify', to: 'ciVerify' }
-  ];
-  
-  // opencode.json dotted/hyphen aliases
-  const configAliases = [
-    { from: 'arch.generate', to: 'generateArchitecture' },
-    { from: 'backlog.generate', to: 'generateBacklog' },
-    { from: 'docs.prd.generate', to: 'generatePRD' },
-    { from: 'docs.sow.generate', to: 'generateSOW' },
-    { from: 'codegen.scaffold', to: 'scaffold' },
-    { from: 'codegen.feature', to: 'generateFeature' },
-    { from: 'codegen.tests', to: 'codegenGenerateTests' },
-    { from: 'qa.testplan.generate', to: 'generateTestPlan' },
-    { from: 'qa.risk_matrix.generate', to: 'generateRiskMatrix' },
-    { from: 'qa.static.run', to: 'runStaticAnalysis' },
-    { from: 'proposal.generate', to: 'generateProposal' },
-    { from: 'proposal.package.export', to: 'packageExport' },
-    { from: 'delivery.runbook.generate', to: 'generateRunbook' },
-    { from: 'delivery.nginx.generate', to: 'generateNginxConfig' },
-    { from: 'delivery.smoketest.run', to: 'runSmoketest' },
-    { from: 'delivery.handoff.package', to: 'packageHandoff' },
-    { from: 'documents.docx.generate', to: 'generateDOCX' },
-    { from: 'documents.xlsx.generate', to: 'generateXLSX' },
-    { from: 'documents.pptx.generate', to: 'generatePPTX' },
-    { from: 'documents.csv.generate', to: 'generateCSV' },
-    { from: 'documents.md.generate', to: 'generateMarkdown' },
-    { from: 'ci.verify', to: 'ciVerify' },
-    { from: 'rate-limit', to: 'enforceRateLimit' },
-    { from: 'source-normalize', to: 'normalizeSource' },
-    { from: 'audit_logToolCall', to: 'logToolCall' },
-    { from: 'audit_replayRun', to: 'replayRun' },
-    { from: 'audit_checkReproducibility', to: 'checkReproducibility' },
-    { from: 'discovery_session_export', to: 'exportSession' },
-    { from: 'research_claims_extract', to: 'researchClaimsExtract' },
-    { from: 'research_citations_analyze', to: 'researchCitationsAnalyze' },
-    { from: 'research_dossier_finalize', to: 'researchDossierFinalize' }
-  ];
-  
-  // Combine all aliases
-  const allAliases = [...existingMcpAliases, ...scriptAliases, ...configAliases];
-  
-  for (const alias of allAliases) {
-    const canonicalTool = CANONICAL_TOOLS.find(t => t.name === alias.to);
+  for (const [aliasName, canonicalName] of Object.entries(EXPLICIT_ALIASES)) {
+    const canonicalTool = CANONICAL_TOOLS.find(t => t.name === canonicalName);
     if (canonicalTool) {
       aliases.push({
-        name: alias.from,
+        name: aliasName,
         description: canonicalTool.description,
         inputSchema: canonicalTool.inputSchema
       });
@@ -564,23 +568,13 @@ export const TOOL_DEFS: ToolDefinition[] = [...CANONICAL_TOOLS, ...TOOL_ALIASES]
 
 // Helper function to get handler by name (including aliases)
 export function getToolHandler(name: string): ((args: any) => Promise<any>) | undefined {
-  // First check if it's a canonical tool
   if (TOOL_HANDLERS[name]) {
     return TOOL_HANDLERS[name];
   }
   
-  // Then check if it's an alias and map to canonical
-  const alias = TOOL_ALIASES.find(t => t.name === name);
-  if (alias) {
-    // Find the canonical tool this alias points to
-    const canonicalName = CANONICAL_TOOLS.find(t => 
-      t.description === alias.description && 
-      t.inputSchema === alias.inputSchema
-    )?.name;
-    
-    if (canonicalName && TOOL_HANDLERS[canonicalName]) {
-      return TOOL_HANDLERS[canonicalName];
-    }
+  const canonicalName = EXPLICIT_ALIASES[name];
+  if (canonicalName && TOOL_HANDLERS[canonicalName]) {
+    return TOOL_HANDLERS[canonicalName];
   }
   
   return undefined;

@@ -58,6 +58,13 @@ describe('MCP Server', () => {
   });
 
   test('should respond to tools/list request with all tools', async () => {
+    // Need to initialize before tools list
+    const initNotification = {
+      jsonrpc: '2.0',
+      method: 'notifications/initialized'
+    };
+    server.stdin.write(JSON.stringify(initNotification) + '\n');
+
     const request = {
       jsonrpc: '2.0',
       id: 2,
@@ -73,5 +80,29 @@ describe('MCP Server', () => {
     const receivedTools = response.result.tools.map((t: any) => t.name);
     const expectedTools = TOOL_DEFS.map(t => t.name);
     expect(receivedTools).toEqual(expect.arrayContaining(expectedTools));
+  });
+
+  test('should support dotted alias invocation (e.g. audit.logToolCall)', async () => {
+    const request = {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/call',
+      params: {
+        name: 'audit.logToolCall',
+        arguments: {
+          toolName: 'test',
+          args: { a: 1 }
+        }
+      }
+    };
+    server.stdin.write(JSON.stringify(request) + '\n');
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const response = responses.find(r => r.id === 3);
+    expect(response).toBeDefined();
+    // Verify it didn't return a "tool not found" error
+    expect(response.error).toBeUndefined();
+    expect(response.result).toBeDefined();
   });
 });

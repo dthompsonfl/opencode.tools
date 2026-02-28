@@ -59,6 +59,12 @@ class PostInstallIntegration {
     console.log('=============================================');
 
     try {
+      if (!process.env.npm_config_global && !process.env.OPENCODE_TOOLS_FORCE_INTEGRATION) {
+        console.log('\nℹ️ Skipping automatic integration in local install context.');
+        console.log('To integrate manually, run: opencode-tools integrate');
+        return;
+      }
+
       // Step 1: Ensure OpenCode config directory exists
       await this.ensureOpenCodeDirectory();
 

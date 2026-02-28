@@ -13,16 +13,7 @@ export class GoogleSearchProvider implements SearchProvider {
 
   async search(query: string, limit: number = 10): Promise<SearchResult[]> {
     if (!this.apiKey || !this.cx) {
-        // Fallback to mock if no keys (for local dev without keys)
-        console.warn('Google Search keys missing, returning mock results.');
-        return [
-            {
-                url: 'https://example.com',
-                title: 'Example Domain',
-                snippet: 'This domain is for use in illustrative examples in documents.',
-                source: 'mock'
-            }
-        ];
+        throw new Error('Google Search API keys missing. Please provide a valid apiKey and cx parameter.');
     }
 
     try {

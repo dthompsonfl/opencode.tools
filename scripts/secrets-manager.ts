@@ -1,27 +1,22 @@
 /**
- * Placeholder for Secrets Manager integration.
+ * Secrets Manager integration.
  *
- * Requirements addressed (TODO.md line 119):
- * - Never commit secrets; integrate a secrets manager for runtime retrieval.
+ * Loads secrets securely from environment variables, preventing committed secrets.
+ * In advanced deployments, this would interface with AWS Secrets Manager, Hashicorp Vault, etc.
  */
 
-const MOCK_SECRETS: { [key: string]: string } = {
-  'GITHUB_API_KEY': 'mock-gh-token-12345',
-  'OPENAI_API_KEY': 'sk-mock-openai-key-54321',
-  'CLIENT_DB_PASSWORD': 'mock-db-password-change-me',
-};
-
 /**
- * Retrieves a secret value by key from the mock store.
- * In a real system, this would interface with AWS Secrets Manager, Vault, etc.
+ * Retrieves a secret value by key from the environment.
+ * Throws an error if the secret is not found.
  * @param key The key of the secret to retrieve.
  * @returns The secret value.
  */
 export function getSecret(key: string): string {
-  const secret = MOCK_SECRETS[key];
+  const secret = process.env[key];
+
   if (!secret) {
-    console.warn("Attempted to retrieve unknown secret: " + key);
-    return "SECRET_NOT_FOUND_" + key;
+    throw new Error(`CRITICAL: Secret '${key}' not found in environment. Please ensure it is set before running.`);
   }
+
   return secret;
 }

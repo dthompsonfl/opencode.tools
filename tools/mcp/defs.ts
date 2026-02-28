@@ -22,7 +22,7 @@ export interface JsonRpcRequest {
 
 export interface JsonRpcResponse {
   jsonrpc: '2.0';
-  id: string | number;
+  id: string | number | null;
   result?: unknown;
   error?: {
     code: number;
@@ -37,7 +37,7 @@ export interface JsonRpcNotification {
   params?: unknown;
 }
 
-export function jsonRpcOk(id: string | number, result: unknown): JsonRpcResponse {
+export function jsonRpcOk(id: string | number | null, result: unknown): JsonRpcResponse {
   return {
     jsonrpc: '2.0',
     id,
@@ -45,7 +45,7 @@ export function jsonRpcOk(id: string | number, result: unknown): JsonRpcResponse
   };
 }
 
-export function jsonRpcErr(id: string | number, code: number, message: string, data?: unknown): JsonRpcResponse {
+export function jsonRpcErr(id: string | number | null, code: number, message: string, data?: unknown): JsonRpcResponse {
   return {
     jsonrpc: '2.0',
     id,
