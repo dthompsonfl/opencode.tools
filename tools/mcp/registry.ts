@@ -568,13 +568,15 @@ export const TOOL_DEFS: ToolDefinition[] = [...CANONICAL_TOOLS, ...TOOL_ALIASES]
 
 // Helper function to get handler by name (including aliases)
 export function getToolHandler(name: string): ((args: any) => Promise<any>) | undefined {
-  if (TOOL_HANDLERS[name]) {
+  if (Object.prototype.hasOwnProperty.call(TOOL_HANDLERS, name)) {
     return TOOL_HANDLERS[name];
   }
   
-  const canonicalName = EXPLICIT_ALIASES[name];
-  if (canonicalName && TOOL_HANDLERS[canonicalName]) {
-    return TOOL_HANDLERS[canonicalName];
+  if (Object.prototype.hasOwnProperty.call(EXPLICIT_ALIASES, name)) {
+    const canonicalName = EXPLICIT_ALIASES[name];
+    if (canonicalName && Object.prototype.hasOwnProperty.call(TOOL_HANDLERS, canonicalName)) {
+      return TOOL_HANDLERS[canonicalName];
+    }
   }
   
   return undefined;

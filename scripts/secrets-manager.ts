@@ -12,6 +12,13 @@
  * @returns The secret value.
  */
 export function getSecret(key: string): string {
+  // Validate that the key is a valid environment variable name
+  // This prevents accessing arbitrary properties or prototype pollution
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
+    throw new Error(`CRITICAL: Invalid secret key format '${key}'.`);
+  }
+
+  // nosemgrep: javascript.lang.security.audit.unsafe-dynamic-method.unsafe-dynamic-method
   const secret = process.env[key];
 
   if (!secret) {
