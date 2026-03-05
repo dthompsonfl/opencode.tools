@@ -270,9 +270,7 @@ program
 program
   .command('mcp')
   .description('Start the MCP server for OpenCode integration')
-  .option('-p, --port <port>', 'Port for remote MCP server (optional, for type: remote)', '3000')
-  .option('-h, --host <host>', 'Host for remote MCP server', 'localhost')
-  .action(async (options) => {
+  .action(async () => {
     try {
       process.env.OPENCODE_MCP = '1';
       
