@@ -18,7 +18,7 @@ These features will reside primarily in `src/cowork/sandbox/` and be exposed via
 **Files to Create/Modify:**
 - `package.json`: Add exact dependency `testcontainers@10.2.2` if not present.
 - `src/cowork/sandbox/db-sandbox.ts` (NEW): Implement logic to spin up temporary PostgreSQL/SQLite containers using `testcontainers`.
-- `tools/mcp-server.ts`: Add `start_db_container(type)`, `run_migration(sql)`, and `seed_mock_data(json)` tools.
+- `tools/mcp-server.ts`: Add `start_db_container(type)`, `run_migration(sql)`, and `seed_mock_data(json)` tools. You must enforce strict parameterized queries and rigorous sanitization logic for all raw SQL input to prevent SQL injection vulnerabilities before the sandbox executes them.
 
 ### 3. Network & API Mocking Engine
 **Files to Create/Modify:**

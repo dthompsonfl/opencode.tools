@@ -11,7 +11,7 @@ You are operating within the `Cowork` plugin system and `Foundry` orchestration 
 ### 1. Intelligent Codebase Indexing (AST/Semantic Search)
 **Files to Create/Modify:**
 - `package.json`: Add exact dependencies `tree-sitter@0.20.6`, `tree-sitter-typescript@0.20.5`, and `faiss-node@0.5.1` (or a similar local vector store with a pinned version).
-- `src/cowork/indexer/ast-parser.ts` (NEW): Create a wrapper class around `tree-sitter` that exposes methods to parse files and extract functions, classes, and variable declarations.
+- `src/cowork/indexer/ast-parser.ts` (NEW): Create a wrapper class around `tree-sitter` that exposes methods to parse files and extract functions, classes, and variable declarations. Ensure that any sensitive or proprietary code data is sanitized using regex patterns or predefined ignore lists before generating vector embeddings, to prevent inadvertent data leakage.
 - `src/cowork/indexer/vector-store.ts` (NEW): Implement a local vector database interface using `faiss-node` to store AST node embeddings and provide similarity search functionality.
 - `tools/mcp-server.ts`: Expose a new tool called `semantic_search_codebase` that leverages the `ast-parser` and `vector-store`. Define a Zod schema for its input (e.g., query string, language).
 - `src/cowork/orchestrator/cowork-orchestrator.ts`: Hook into the initialization phase. If `enableSemanticSearch: true` in `opencode.json`, trigger a background indexing task of the current workspace.
@@ -30,8 +30,8 @@ You are operating within the `Cowork` plugin system and `Foundry` orchestration 
 
 ### 4. Documentation & API Specification Ingestion
 **Files to Create/Modify:**
-- `package.json`: Add exact dependencies `swagger-parser@10.0.3` and `graphql@16.8.1`.
-- `src/cowork/parsers/api-spec-parser.ts` (NEW): Implement logic to detect `swagger.json`, `openapi.yaml`, or `schema.graphql` in the workspace. Create a function to summarize these schemas into markdown.
+- `package.json`: Add exact dependencies `swagger-parser@10.0.3`, `graphql@16.8.1`, and `protobufjs@7.2.6`.
+- `src/cowork/parsers/api-spec-parser.ts` (NEW): Implement logic to detect `swagger.json`, `openapi.yaml`, `schema.graphql`, or `.proto` files in the workspace. Create a unified function to parse these specifications (including Protocol Buffers) and summarize their schemas into markdown.
 - `src/cowork/orchestrator/cowork-orchestrator.ts`: On initialization, if an API spec is detected, parse it and inject the summary into the Stateful Workspace Memory.
 - `tools/mcp-server.ts`: Expose `ingest_api_spec` tool to manually trigger spec ingestion.
 

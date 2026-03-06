@@ -16,7 +16,7 @@ These features must integrate with the `Cowork` workspace manager and `Foundry` 
 
 ### 2. Pattern-Aware Scaffolders
 **Files to Create/Modify:**
-- `src/cowork/generation/pattern-analyzer.ts` (NEW): Implement a module that queries the AST index (assuming it exists) to find existing patterns (e.g., finding all React hooks or Django models) and extracts a template structure.
+- `src/cowork/generation/pattern-analyzer.ts` (NEW): Implement a module that queries the AST index to find existing patterns (e.g., finding all React hooks or Django models) and extracts a template structure. The implementation must robustly verify that the AST index is fully initialized before querying; if unavailable, gracefully fallback to regex-based heuristics or trigger an explicit initialization request before proceeding.
 - `tools/mcp-server.ts`: Expose a `scaffold_from_pattern` tool that accepts a target path and a pattern type. It generates a new file based on the inferred pattern rather than hardcoded strings.
 
 ### 3. Incremental "Shadow" Compilation
