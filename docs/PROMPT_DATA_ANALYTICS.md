@@ -11,7 +11,7 @@ These features involve persistent databases for memory storage and modifying the
 ### 1. Error Categorization & Memory
 **Files to Create/Modify:**
 - `src/cowork/persistence/migrations/0002_add_error_memory.sql` (NEW): Create a Postgres schema to store error strings, context, and the eventual successful fix (diff).
-- `src/cowork/runtime/error-knowledgebase.ts` (NEW): Implement logic to automatically record a successful task's error history into the database upon passing tests.
+- `src/cowork/runtime/error-knowledgebase.ts` (NEW): Implement logic to automatically record a successful task's error history into the database upon passing tests. It is critical that this implementation explicitly redacts and sanitizes all secrets, credentials, or proprietary tokens from the error strings and diffs before they are persisted to the database to prevent data leakage.
 - `tools/mcp-server.ts`: Expose a `query_past_mistakes(error_string)` tool allowing agents to search the database when they encounter a new bug.
 
 ### 2. Telemetry & Confidence Scoring

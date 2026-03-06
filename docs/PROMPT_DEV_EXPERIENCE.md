@@ -21,11 +21,11 @@ These features act as final output stages in the delivery workflow and safety wr
 ### 3. Jira/Linear/GitHub Issues Synchronizer
 **Files to Create/Modify:**
 - `src/cowork/integrations/issue/tracker.ts` (NEW): Implement generic interfaces and specific adapters for fetching ticket details and transitioning status using REST APIs.
-- `tools/mcp-server.ts`: Expose `read_ticket(id)` and `transition_ticket(id, status)` tools. Ensure API keys are drawn securely from `process.env`.
+- `tools/mcp-server.ts`: Expose `read_ticket(id)` and `transition_ticket(id, status)` tools. Ensure all API keys and credentials are drawn securely from `process.env` (or a secure local vault) and are never hardcoded in the wrappers.
 
 ### 4. Natural Language to Shell Translator / Safe Execution
 **Files to Create/Modify:**
-- `src/cowork/runtime/safe-bash.ts` (NEW): Wrap bash execution. For any command submitted by an agent, parse it for dangerous flags (`rm -rf`, etc.). If risky, use a lightweight LLM call to explain the command's intent in English.
+- `src/cowork/runtime/safe-bash.ts` (NEW): Wrap bash execution. For any command submitted by an agent, parse it for dangerous flags (`rm -rf`, etc.). If risky, use a secure, locally-hosted LLM process to explain the command's intent in English. Do not transmit bash commands to an external LLM to prevent leaking potentially sensitive environmental or internal data.
 - `src/tui-app.ts` / `src/cli.ts`: If a command is flagged as risky, prompt the user for explicit approval (`[y/N]`) before executing.
 
 ## Testing Requirements
