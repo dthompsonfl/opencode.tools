@@ -15,13 +15,13 @@ These features will heavily modify the `Foundry` Quality Gates and the `ProjectD
 
 ### 2. Mutation Testing Runner
 **Files to Create/Modify:**
-- `package.json`: Add `@stryker-mutator/core` as a dependency.
+- `package.json`: Add exact dependency `@stryker-mutator/core@8.2.6`.
 - `src/foundry/quality-gates/mutation-gate.ts` (NEW): Implement a new quality gate. Configure it to run Stryker only against files modified in the current session. Define a threshold (e.g., 80% mutation score) required to pass the gate.
 - `src/foundry/quality-gates.ts`: Register the `MutationGate`.
 
 ### 3. Visual Regression Testing Automation
 **Files to Create/Modify:**
-- `package.json`: Add `playwright` or `puppeteer`.
+- `package.json`: Add exact dependency `playwright@1.45.1` (or a pinned `puppeteer` version).
 - `src/cowork/tools/visual-testing.ts` (NEW): Implement a wrapper that spins up a headless browser, navigates to a URL, captures a screenshot, and compares it to a baseline image using pixel diffing (e.g., `pixelmatch`).
 - `tools/mcp-server.ts`: Expose `capture_screenshot` and `compare_visual_diff` tools.
 
