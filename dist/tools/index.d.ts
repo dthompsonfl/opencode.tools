@@ -14,7 +14,7 @@ export { generateRunbook, generateNginxConfig, runSmoketest, packageHandoff } fr
 export { verify as ciVerify } from './ci';
 export { generateDocument, generateDOCX, generateXLSX, generatePPTX, generateCSV, generateMarkdown, generateQuickDocument } from './documents';
 export { foundryOrchestrate, foundryStatus, foundryHealth, foundryCreateRequest } from './foundry';
-export { cto_sweep } from './mcp-server-legacy';
+export { cto_sweep } from './mcp-server-legacy.js';
 export { coworkList, coworkRun, coworkSpawn, coworkHealth, coworkPlugins, coworkAgents } from './cowork';
 export { pdfGenerate } from './pdf';
 export { summarizeDossier } from './summarization';

@@ -82,8 +82,8 @@ Object.defineProperty(exports, "foundryStatus", { enumerable: true, get: functio
 Object.defineProperty(exports, "foundryHealth", { enumerable: true, get: function () { return foundry_1.foundryHealth; } });
 Object.defineProperty(exports, "foundryCreateRequest", { enumerable: true, get: function () { return foundry_1.foundryCreateRequest; } });
 // Gateway MCP tools
-var mcp_server_legacy_1 = require("./mcp-server-legacy");
-Object.defineProperty(exports, "cto_sweep", { enumerable: true, get: function () { return mcp_server_legacy_1.cto_sweep; } });
+var mcp_server_legacy_js_1 = require("./mcp-server-legacy.js");
+Object.defineProperty(exports, "cto_sweep", { enumerable: true, get: function () { return mcp_server_legacy_js_1.cto_sweep; } });
 // Cowork multi-agent runtime tools
 var cowork_1 = require("./cowork");
 Object.defineProperty(exports, "coworkList", { enumerable: true, get: function () { return cowork_1.coworkList; } });
