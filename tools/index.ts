@@ -73,7 +73,7 @@ export {
 } from './foundry';
 
 // Gateway MCP tools
-export { cto_sweep } from './mcp-server-legacy';
+export { cto_sweep } from './mcp-server-legacy.js';
 
 // Cowork multi-agent runtime tools
 export { 
