@@ -28,6 +28,15 @@ if (typeof process !== 'undefined') {
   console.warn = (...args: any[]) => process.stderr.write(util.format(...args) + '\n');
   
   // Keep console.error as-is (already writes to stderr)
+
+  // Add robust error boundaries to prevent silent crashes and unhandled Promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    process.stderr.write(`Unhandled Rejection: ${reason}\n`);
+  });
+
+  process.on('uncaughtException', (error) => {
+    process.stderr.write(`Uncaught Exception: ${error.message}\n${error.stack}\n`);
+  });
 }
 
 /**

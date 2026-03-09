@@ -294,21 +294,19 @@
       "type": "local",
       "command": [
         "npx",
-        "-y",
-        "@modelcontextprotocol/server-memory@latest"
+        "@modelcontextprotocol/server-memory"
       ],
       "enabled": true,
-      "timeout": 5000
+      "timeout": 15000
     },
     "critical-thinking": {
       "type": "local",
       "command": [
         "npx",
-        "-y",
         "mcp-server-actor-critic-thinking"
       ],
       "enabled": true,
-      "timeout": 15000
+      "timeout": 30000
     },
     "Serena": {
       "type": "local",
@@ -320,43 +318,45 @@
         "start-mcp-server"
       ],
       "enabled": true,
-      "timeout": 15000
+      "timeout": 60000
     },
     "sequential-thinking": {
       "type": "local",
       "command": [
         "npx",
-        "-y",
         "@modelcontextprotocol/server-sequential-thinking"
       ],
-      "enabled": true
+      "enabled": true,
+      "timeout": 15000
     },
     "shadcn": {
       "type": "local",
       "command": [
         "npx",
+        "-y",
         "shadcn@latest",
         "mcp"
       ],
-      "enabled": true
+      "enabled": true,
+      "timeout": 15000
     },
     "Desktop-Commander": {
       "type": "local",
       "command": [
         "npx",
-        "-y",
         "@wonderwhy-er/desktop-commander"
       ],
-      "enabled": true
+      "enabled": true,
+      "timeout": 15000
     },
     "next-devtools": {
       "type": "local",
       "command": [
         "npx",
-        "-y",
         "next-devtools-mcp@latest"
       ],
-      "enabled": true
+      "enabled": true,
+      "timeout": 15000
     },
     "prisma-mcp-server": {
       "type": "local",
@@ -366,27 +366,28 @@
         "prisma",
         "mcp"
       ],
-      "enabled": true
+      "enabled": true,
+      "timeout": 15000
     },
     "Better Auth": {
       "type": "local",
       "command": [
         "npx",
-        "-y",
         "mcp-remote",
         "https://mcp.inkeep.com/better-auth/mcp"
       ],
-      "enabled": true
+      "enabled": true,
+      "timeout": 15000
     },
     "Stripe": {
       "type": "local",
       "command": [
         "npx",
-        "-y",
         "mcp-remote",
         "https://mcp.stripe.com"
       ],
-      "enabled": true
+      "enabled": true,
+      "timeout": 15000
     }
   },
   "permission": {

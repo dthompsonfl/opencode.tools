@@ -55,6 +55,8 @@
   "devDependencies": {
     "@jest/globals": "^27.5.1",
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "@modelcontextprotocol/server-memory": "^2026.1.26",
+    "@modelcontextprotocol/server-sequential-thinking": "^2025.12.18",
     "@types/ink-gradient": "^2.0.4",
     "@types/jest": "^29.5.14",
     "@types/js-yaml": "^4.0.9",
@@ -64,8 +66,12 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
+    "@wonderwhy-er/desktop-commander": "^0.2.38",
     "eslint": "^10.0.1",
     "jest": "^30.2.0",
+    "mcp-remote": "^0.1.38",
+    "mcp-server-actor-critic-thinking": "^1.0.0",
+    "next-devtools-mcp": "^0.3.10",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
