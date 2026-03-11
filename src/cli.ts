@@ -130,7 +130,9 @@ program
     process.exit(1);
   });
 
-    process.exit(1);
+// Delete these lines:
+//     process.exit(1);
+//   });
   });
 
 // Orchestrate command - deprecated
