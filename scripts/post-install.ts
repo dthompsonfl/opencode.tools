@@ -177,7 +177,42 @@ class PostInstallIntegration {
       }
     }
 
-    console.log('🔗 Merging MCP configuration into opencode.json...');
+    // Merge agents
+    if (packageConfig.agent) {
+      if (typeof packageConfig.agent === 'object') {
+        globalConfig.agent = {
+          ...(typeof globalConfig.agent === 'object' ? globalConfig.agent : {}),
+          ...packageConfig.agent
+        };
+      }
+    }
+
+    // Merge tools
+    if ((packageConfig as any).tools) {
+      (globalConfig as any).tools = {
+        ...((globalConfig as any).tools || {}),
+        ...(packageConfig as any).tools
+      };
+    }
+
+    // Merge plugins
+    if (packageConfig.plugin) {
+      if (Array.isArray(packageConfig.plugin)) {
+        const existingPlugins = Array.isArray(globalConfig.plugin) ? globalConfig.plugin : [];
+        const newPlugins = new Set([...existingPlugins, ...packageConfig.plugin]);
+        globalConfig.plugin = Array.from(newPlugins) as any;
+      }
+    }
+
+    // Configure system prompt instruction globally if found
+    const systemPromptPath = path.join(this.currentPackageDir, 'opencode-system-prompt.md');
+    if (fs.existsSync(systemPromptPath)) {
+      if (!(globalConfig as any).customInstructions) {
+        (globalConfig as any).customInstructions = fs.readFileSync(systemPromptPath, 'utf-8');
+      }
+    }
+
+    console.log('🔗 Merging comprehensive configuration into opencode.json...');
     fs.writeFileSync(globalConfigPath, JSON.stringify(globalConfig, null, 2));
   }
 
