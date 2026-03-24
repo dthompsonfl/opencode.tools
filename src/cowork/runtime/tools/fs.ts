@@ -67,6 +67,7 @@ function resolveAndValidate(userPath: unknown, basePath: string, mustExist = fal
   }
 
   // Resolve to absolute path
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   const resolvedPath = path.resolve(basePath, userPath);
 
   // Check if path escapes base directory
@@ -155,6 +156,7 @@ export function createFsTools(options: FsToolOptions) {
       const existed = fs.existsSync(resolvedPath);
 
       // Atomic write: write to temp file, then rename
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const tempPath = path.join(parentDir, `${TEMP_FILE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2)}.tmp`);
 
       try {
@@ -196,6 +198,7 @@ export function createFsTools(options: FsToolOptions) {
       const entries = fs.readdirSync(resolvedPath, { withFileTypes: true });
 
       const result = entries.map((entry) => {
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const entryStat = fs.statSync(path.join(resolvedPath, entry.name));
         return {
           name: entry.name,

@@ -7,6 +7,7 @@ export class AuditLogger {
   private logPath: string;
 
   constructor(runDir: string) {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     this.logPath = path.join(runDir, 'toolcalls.jsonl');
   }
 

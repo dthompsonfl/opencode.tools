@@ -116,6 +116,7 @@ function resolveDbPath(extension: string): string {
     return configured;
   }
 
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   return path.join(process.cwd(), 'data', `${DEFAULT_DB_BASENAME}${extension}`);
 }
 

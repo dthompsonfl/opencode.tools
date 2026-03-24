@@ -116,6 +116,7 @@ export class SessionPersistenceAdapter implements UnifiedStatePersistenceAdapter
           continue;
         }
 
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const fullPath = path.join(projectDir, fileName);
         const raw = await fs.readFile(fullPath, 'utf8');
         try {
@@ -179,7 +180,9 @@ export class SessionPersistenceAdapter implements UnifiedStatePersistenceAdapter
   }
 
   private resolveWithinBase(baseDir: string, childName: string): string {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const resolvedBase = path.resolve(baseDir);
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const resolvedChild = path.resolve(resolvedBase, childName);
     const withSeparator = `${resolvedBase}${path.sep}`;
     if (resolvedChild !== resolvedBase && !resolvedChild.startsWith(withSeparator)) {

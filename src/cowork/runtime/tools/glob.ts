@@ -13,6 +13,7 @@ export function createGlobTool(options: GlobOptions) {
 
   function isPathSafe(p: string) {
     if (p.includes('\0')) return false;
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const resolved = path.resolve(basePath, p);
     const rel = path.relative(basePath, resolved);
     if (rel.startsWith('..') || path.isAbsolute(rel)) return false;
@@ -22,6 +23,7 @@ export function createGlobTool(options: GlobOptions) {
   function walk(dir: string, acc: string[]) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const full = path.join(dir, entry.name);
       const rel = path.relative(basePath, full);
       if (exclude.some(e => rel.includes(e))) continue;

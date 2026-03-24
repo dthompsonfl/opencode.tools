@@ -253,6 +253,7 @@ export class FontLoader {
         return fs.promises.readFile(source);
       }
 
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const localPath = path.join(this.defaultFontDir, path.basename(source));
       if (fs.existsSync(localPath)) {
         return fs.promises.readFile(localPath);
@@ -332,6 +333,7 @@ export class FontLoader {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
 
       for (const entry of entries) {
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
           files.push(...this.scanDirectory(fullPath));

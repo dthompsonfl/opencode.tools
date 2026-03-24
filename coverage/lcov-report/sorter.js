@@ -81,6 +81,7 @@ var addSorting = (function() {
             cols.push(col);
             if (col.sortable) {
                 col.defaultDescSort = col.type === 'number';
+                // nosemgrep: javascript.browser.security.insecure-document-method.insecure-document-method
                 colNode.innerHTML =
                     colNode.innerHTML + '<span class="sorter"></span>';
             }

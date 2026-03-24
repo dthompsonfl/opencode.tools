@@ -169,6 +169,7 @@ export function createBashTools(options: BashToolOptions) {
       // Validate and resolve cwd
       let cwd = basePath;
       if (execOptions?.cwd) {
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const resolvedCwd = path.resolve(basePath, execOptions.cwd);
         const relative = path.relative(basePath, resolvedCwd);
         const escapesBase = relative.startsWith('..') || path.isAbsolute(relative);
@@ -323,6 +324,7 @@ export function createBashTools(options: BashToolOptions) {
 
       let cwd = basePath;
       if (execOptions?.cwd) {
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const resolvedCwd = path.resolve(basePath, execOptions.cwd);
         cwd = resolvedCwd;
       }

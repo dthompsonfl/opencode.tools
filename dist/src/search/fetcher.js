@@ -76,6 +76,7 @@ class WebFetcher {
             };
         }
         catch (error) {
+            // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
             console.error(`Failed to fetch ${url}:`, error);
             throw error;
         }

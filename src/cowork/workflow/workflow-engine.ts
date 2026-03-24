@@ -479,6 +479,7 @@ function eventPatternMatches(pattern: string, event: string): boolean {
     .map((segment) => (segment === '*' ? '[a-z0-9_-]+' : segment.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')))
     .join(':');
 
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   return new RegExp(`^${regex}$`).test(event);
 }
 

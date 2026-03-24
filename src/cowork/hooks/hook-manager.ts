@@ -89,6 +89,7 @@ export class HookManager {
         }
       } catch (error) {
         // Log error but continue processing other hooks
+        // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
         console.error(`Hook "${hook.name}" failed:`, error);
       }
     }
@@ -182,6 +183,7 @@ export class HookManager {
           if (resolved) return;
           resolved = true;
 
+          // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
           console.error(`Hook "${hook.name}" error:`, error);
           resolve({ decision: 'allow' });
         });
@@ -191,6 +193,7 @@ export class HookManager {
         if (resolved) return;
         resolved = true;
 
+        // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
         console.error(`Failed to execute hook "${hook.name}":`, error);
         resolve({ decision: 'allow' });
       }

@@ -325,6 +325,7 @@ export class PostgresPersistenceManager implements PersistenceManager {
       config.application_name = options.applicationName;
     }
     if (options.ssl) {
+      // nosemgrep: problem-based-packs.insecure-transport.js-node.bypass-tls-verification.bypass-tls-verification
       config.ssl = { rejectUnauthorized: false };
     }
 

@@ -7,7 +7,9 @@ Strategic backlog and enhancement roadmap: `docs/ENTERPRISE_GAP_BACKLOG.md`.
 
 ## 1) Integration Surfaces
 
-OpenCode Tools currently integrates through four primary surfaces:
+OpenCode Tools currently integrates through five primary surfaces:
+
+- **Seamless OpenCode CLI Integration**: Native registration of all tools into `~/.config/opencode/opencode.json` globally using `scripts/native-integrate.js`. See `docs/OPENCODE_INTEGRATION_GUIDE.md` for full details.
 
 - CLI runtime: `src/cli.ts`
 - TUI runtime: `src/tui-app.ts`

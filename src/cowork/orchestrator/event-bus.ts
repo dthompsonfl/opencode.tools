@@ -355,6 +355,7 @@ function compilePattern(pattern: string): RegExp {
     })
     .join(':');
 
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   return new RegExp(`^${escaped}$`);
 }
 

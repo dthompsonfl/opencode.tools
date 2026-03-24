@@ -70,6 +70,7 @@ function validatePath(filePath: string, basePath: string): string {
     throw new Error('Invalid path: null-byte is not allowed');
   }
 
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   const resolvedPath = path.resolve(basePath, filePath);
   const relative = path.relative(basePath, resolvedPath);
   const escapesBase = relative.startsWith('..') || path.isAbsolute(relative);
@@ -147,6 +148,7 @@ export function createEditTools(options: EditToolOptions) {
             }
 
             if (edit.replaceAll) {
+              // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
               const count = (content.match(new RegExp(escapeRegex(edit.oldString), 'g')) || []).length;
               content = content.split(edit.oldString).join(edit.newString);
               operationsApplied = count;

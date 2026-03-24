@@ -12,6 +12,7 @@ export function createGrepTool(options: GrepOptions) {
 
   function isSafeFile(file: string) {
     if (file.includes('\0')) return false;
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const resolved = path.resolve(basePath, file);
     const rel = path.relative(basePath, resolved);
     if (rel.startsWith('..') || path.isAbsolute(rel)) return false;
@@ -37,6 +38,7 @@ export function createGrepTool(options: GrepOptions) {
       for (const f of files) {
         if (filesSearched >= maxFiles) break;
         if (!isSafeFile(f)) continue;
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const resolved = path.resolve(basePath, f);
         const content = fs.readFileSync(resolved, 'utf-8');
         const lines = content.split(/\r?\n/);

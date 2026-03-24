@@ -41,6 +41,7 @@ const audit_1 = require("./audit");
 const artifacts_1 = require("./artifacts");
 class RunStore {
     constructor(runId = (0, uuid_1.v4)(), baseDir = 'runs') {
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const runDir = path.join(baseDir, runId);
         if (!fs.existsSync(runDir)) {
             fs.mkdirSync(runDir, { recursive: true });

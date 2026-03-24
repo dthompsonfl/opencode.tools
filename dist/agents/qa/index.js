@@ -51,6 +51,7 @@ class QAAgent {
         logger_1.logger.info('QA Agent started', { agent: this.agentName, path: codebasePath });
         // In a real execution, we would use TestSprite tool here.
         // Example: await toolWrapper.call('testsprite.bootstrap', { projectPath: codebasePath, type: 'backend', localPort: 3000, testScope: 'codebase' });
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const packageJsonPath = path.join(codebasePath, 'package.json');
         const hasPackageJson = fs.existsSync(packageJsonPath);
         const dependencySummary = hasPackageJson

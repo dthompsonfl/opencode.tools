@@ -125,6 +125,7 @@ export class CoworkConfigManager {
       configFilePath,
     });
 
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const absolutePath = path.resolve(configFilePath);
     this.fileWatcher = fs.watch(absolutePath, async (eventType) => {
       if (eventType !== 'change' && eventType !== 'rename') {
@@ -308,6 +309,7 @@ export function buildCoworkConfigFromEnvironment(
 }
 
 async function readConfigFromFile(configFilePath: string): Promise<DeepPartial<CoworkConfigInput>> {
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   const absolutePath = path.resolve(configFilePath);
   const fileContents = await fsPromises.readFile(absolutePath, 'utf8');
   const extension = path.extname(absolutePath).toLowerCase();

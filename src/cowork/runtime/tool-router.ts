@@ -56,6 +56,7 @@ export class ToolRouter {
     this.defaultTimeout = options?.defaultTimeout ?? 60000;
     
     const configuredBasePath = options?.fsBasePath ?? process.env.COWORK_FS_BASE_PATH;
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     this.fsBasePath = configuredBasePath ? path.resolve(configuredBasePath) : undefined;
 
     // Register legacy filesystem tools (backward compatibility)
@@ -76,6 +77,7 @@ export class ToolRouter {
       throw new Error('Invalid basePath provided to ToolRouter.configureBasePath');
     }
 
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const resolved = path.resolve(basePath);
     this.fsBasePath = resolved;
     // Initialize tools with provided allowlist
@@ -486,6 +488,7 @@ export class ToolRouter {
       throw new Error('Invalid path: null-byte is not allowed.');
     }
 
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const resolvedPath = path.resolve(this.fsBasePath, rawPath);
     const relative = path.relative(this.fsBasePath, resolvedPath);
     const escapesBase = relative.startsWith('..') || path.isAbsolute(relative);

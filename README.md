@@ -218,6 +218,7 @@ npx jest tests/integration/cowork/persistence-and-eventing.integration.test.ts -
 
 - Developer guide: `AGENTS.md`
 - Integration: `INTEGRATION_GUIDE.md`
+- **Seamless OpenCode Integration**: `docs/OPENCODE_INTEGRATION_GUIDE.md`
 - Foundry implementation notes: `FOUNDRY_IMPLEMENTATION_SUMMARY.md`
 - **Collaborative Teams Guide**: `docs/FOUNDRY_COWORK_INTEGRATION_GUIDE.md`
 - **Cowork Workspace Guide**: `docs/COWORK_SPACE_GUIDE.md`

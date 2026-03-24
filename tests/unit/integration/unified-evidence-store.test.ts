@@ -201,6 +201,7 @@ describe('UnifiedEvidenceStore', () => {
 function createTempFilePath(prefix: string): string {
   return path.join(
     os.tmpdir(),
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
   );
 }

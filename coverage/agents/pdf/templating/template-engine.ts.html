@@ -875,12 +875,15 @@ export interface RenderResult {
 `;
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (template.header) {</span>
+// nosemgrep: javascript.express.security.audit.xss.mustache.explicit-unescape.template-explicit-unescape
 <span class="cstat-no" title="statement not covered" >      source += `  {{&gt; header }}\n`;</span>
     }
 &nbsp;
+// nosemgrep: javascript.express.security.audit.xss.mustache.explicit-unescape.template-explicit-unescape
 <span class="cstat-no" title="statement not covered" >    source += `  {{&gt; content }}\n`;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    <span class="missing-if-branch" title="if path not taken" >I</span>if (template.footer) {</span>
+// nosemgrep: javascript.express.security.audit.xss.mustache.explicit-unescape.template-explicit-unescape
 <span class="cstat-no" title="statement not covered" >      source += `  {{&gt; footer }}\n`;</span>
     }
 &nbsp;

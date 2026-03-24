@@ -36,6 +36,45 @@ function integrateWithOpenCode(): void {
   
   fs.writeFileSync(toolsConfigPath, JSON.stringify(toolsConfig, null, 2));
   logger.success('Tools configuration saved to opencode-tools.json');
+
+  // Also update opencode.json directly
+  const opencodeJsonPath = path.join(opencodeDir, 'opencode.json');
+  let globalConfig: Record<string, any> = {};
+
+  if (fs.existsSync(opencodeJsonPath)) {
+    try {
+      globalConfig = JSON.parse(fs.readFileSync(opencodeJsonPath, 'utf-8'));
+    } catch (e) {
+      logger.warn('Could not parse global opencode.json');
+    }
+  }
+
+  // Ensure tools object exists
+  globalConfig.tools = globalConfig.tools || {};
+
+  // Add all tools globally
+  for (const tool of TOOL_DEFS) {
+    globalConfig.tools[tool.name] = true;
+  }
+
+  // Merge into agent specific tools
+  globalConfig.agent = globalConfig.agent || {};
+  for (const agentName of toolsConfig.agents) {
+    if (!globalConfig.agent[agentName]) {
+      globalConfig.agent[agentName] = {};
+    }
+    globalConfig.agent[agentName].tools = globalConfig.agent[agentName].tools || {};
+    for (const tool of TOOL_DEFS) {
+      globalConfig.agent[agentName].tools[tool.name] = true;
+    }
+  }
+
+  try {
+    fs.writeFileSync(opencodeJsonPath, JSON.stringify(globalConfig, null, 2));
+    logger.success('Global opencode.json tools configuration updated');
+  } catch (e) {
+    logger.error('Failed to update global opencode.json');
+  }
 }
 
 if (require.main === module) {

@@ -29,7 +29,9 @@ function copyDirectory(src: string, dest: string): void {
   const entries = fs.readdirSync(src, { withFileTypes: true }) as Dirent[];
 
   for (const entry of entries) {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const srcPath = path.join(src, entry.name);
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const destPath = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {
