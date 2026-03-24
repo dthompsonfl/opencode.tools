@@ -1319,11 +1319,19 @@ export class FoundryOrchestrator {
     while (ctoIteration < maxCtoIterations) {
       ctoIteration += 1;
       
+      // Pull latest CTO mailbox updates
+      const mailboxMessages = this.collaborationHub.getMessages({ participant: 'CTO_ORCHESTRATOR' });
+      const recentMailbox = mailboxMessages
+        .filter(m => new Date(m.timestamp).getTime() > (checkpoint.updatedAt || 0))
+        .map(m => `[From ${m.from}]: ${m.content}`)
+        .join('\n');
+
       // Build the CTO review task with all context
       const passedGates = gateResults.filter((gate) => gate.passed).length;
       const failedGates = gateResults.length - passedGates;
       
       const ctoReviewTask = [
+        ...(recentMailbox ? ['--- RECENT MAILBOX NOTIFICATIONS ---', recentMailbox, '-----------------------------------', ''] : []),
         `Project: ${request.projectName}`,
         `Quality gates: ${passedGates} passed, ${failedGates} failed.`,
         `Completion criteria: ${this.activeCriteriaReport?.passed ? 'passed' : 'failed'}.`,
@@ -1339,15 +1347,23 @@ export class FoundryOrchestrator {
         'Focus on: strategic alignment, architectural soundness, business value, risk assessment.',
       ].join('\n');
 
+      const taskSignature = `task:cto_review:${ctoIteration}`;
       const ctoApproved = await this.runRoleTaskWithCheckpoint(
         stateMachine,
-        `task:cto_review:${ctoIteration}`,
+        taskSignature,
         checkpoint,
         gateResults,
         'CTO_ORCHESTRATOR',
         `CTO Review iteration ${ctoIteration}`,
         ctoReviewTask,
       );
+
+      // Find the executed task to extract the CTO's feedback summary
+      // Sort to get the most recent matching task
+      const ctoTasks = this.tasks.filter(t => t.title === `CTO Review iteration ${ctoIteration}`);
+      const ctoTask = ctoTasks.length > 0 ? ctoTasks[ctoTasks.length - 1] : undefined;
+      const taskSummary = ctoTask?.summary || '';
+      lastReview.notes = [taskSummary];
 
       // Parse the CTO's response for structured decision
       // For now, we assume ctoApproved means the CTO认可 (approved)
@@ -1356,7 +1372,7 @@ export class FoundryOrchestrator {
       if (ctoApproved) {
         // CTO approved - check if there are required changes
         const hasRequiredChanges = lastReview.notes.some(note => 
-          note.toLowerCase().includes('change') || note.toLowerCase().includes('fix')
+          note.toLowerCase().includes('change') || note.toLowerCase().includes('fix') || note.toLowerCase().includes('failed')
         );
         
         if (!hasRequiredChanges) {
