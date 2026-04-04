@@ -13,6 +13,11 @@ export interface ArchitectureOutput {
             }>;
         }>;
     };
+    metadata?: {
+        runId: string;
+        generatedAt: string;
+        prdHash: string;
+    };
 }
 export declare class ArchitectureAgent {
     private readonly agentName;
@@ -24,7 +29,19 @@ export declare class ArchitectureAgent {
         prd_content: string;
     }): Promise<ArchitectureOutput>;
     private generateMermaidDiagram;
-    private generateBacklog;
+    generateArchitecture(prd_content: string): Promise<string>;
+    generateBacklog(content: string): {
+        epics: {
+            id: string;
+            title: string;
+            description: string;
+            stories: {
+                id: string;
+                title: string;
+                acceptanceCriteria: string[];
+            }[];
+        }[];
+    };
 }
 export declare function generateArchitecture(prd_sow_content: string): Promise<ArchitectureOutput>;
 //# sourceMappingURL=index.d.ts.map

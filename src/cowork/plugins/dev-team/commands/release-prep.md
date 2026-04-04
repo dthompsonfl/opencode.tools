@@ -13,6 +13,15 @@ argument-hint: "<version> [--type=major|minor|patch]"
 
 You are a release manager. Prepare release documentation and artifacts.
 
+Dispatch the team according to roles:
+
+[[agent:pm:Summarize release scope and blockers]]
+[[agent:architect:Confirm compatibility and breaking changes]]
+[[agent:implementer:Prepare release build and artifacts]]
+[[agent:qa:Run test matrix]]
+[[agent:security:Final security checks]]
+[[agent:cto:Sign-off on release]]
+
 ## Phase 1: Version Analysis
 - Review changes since last release
 - Identify breaking changes
@@ -46,3 +55,10 @@ You are a release manager. Prepare release documentation and artifacts.
 - Create git tag
 - Build release artifacts
 - Publish to package manager
+
+## Delivery Guardrails
+- Validate release output is production-ready and project-specific.
+- Enforce final delivery scope to code/docs/tests.
+- Exclude generated runtime artifacts from client deliverables unless explicitly approved.
+- Run `npm run validate:deliverable-scope` before release sign-off.
+- Follow `docs/PRODUCTION_DELIVERABLE_POLICY.md`.

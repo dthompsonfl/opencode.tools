@@ -17,22 +17,31 @@
     "baseUrl": ".",
     "paths": {
       "src/*": ["src/*"],
-      "@/*": ["src/*"],
+      "@/*": ["src/*", "foundry/*"],
+      "@src/*": ["src/*"],
       "agents/*": ["agents/*"],
-      "tools/*": ["tools/*"]
+      "tools/*": ["tools/*"],
+      "@foundry/core": ["src/foundry/core/index.ts", "foundry/foundry/core"],
+      "@foundry/core/*": ["src/foundry/core/*", "foundry/foundry/core/*"],
+      "@foundry/types": ["src/foundry/types.ts", "foundry/foundry/types/index.ts"],
+      "@foundry/types/*": ["foundry/foundry/types/*"],
+      "@foundry/*": ["src/foundry/*", "foundry/foundry/*"]
     }
   },
   "include": [
     "src/**/*",
+    "src/types/**/*",
     "agents/**/*",
     "tools/**/*",
     "examples/**/*",
     "scripts/**/*",
-    "types/**/*"
+    "types/**/*",
+    "foundry/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "tests"
+    "tests",
+    "foundry/foundry/tui/**/*"
   ]
 }

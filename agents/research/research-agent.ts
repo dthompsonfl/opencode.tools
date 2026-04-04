@@ -6,6 +6,8 @@ import { JsonDatabase } from '../../src/database/json-db';
 import { ResearchGatekeeper } from '../../src/governance/gatekeeper';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import { EventBus } from '../../src/cowork/orchestrator/event-bus';
+import { createProvider, ProviderType } from '../../src/llm-providers';
 
 export class ResearchError extends Error {
   constructor(message: string, public context?: Record<string, any>) {
@@ -22,6 +24,7 @@ interface SearchResult {
 }
 
 export class ResearchAgent {
+  private provider: string = 'openai';
   private readonly agentName = 'research-agent';
   private readonly promptVersion = 'v1';
   private readonly mcpVersion = 'v1';
@@ -31,6 +34,62 @@ export class ResearchAgent {
   constructor(db?: Database, gatekeeper?: ResearchGatekeeper) {
     this.db = db || new JsonDatabase();
     this.gatekeeper = gatekeeper || new ResearchGatekeeper();
+  }
+
+  async plan(args: any): Promise<any> {
+    const { topic, scope, goals } = args;
+    const llm = createProvider(this.provider as ProviderType);
+    const response = await llm.chatCompletion({
+      messages: [
+        { role: "system", content: "You are a senior research analyst. Generate a research plan." },
+        { role: "user", content: `Topic: ${topic}\nScope: ${scope}\nGoals: ${goals?.join(", ")}` }
+      ]
+    });
+    return { plan: response.content };
+  }
+
+  async gather(args: any): Promise<any> {
+    const { plan, sources } = args;
+    return { data: `Gathered data based on plan: ${String(plan).substring(0, 50)}... from ${sources?.length || 0} sources` };
+  }
+
+  async extractClaims(args: any): Promise<any> {
+    const { content } = args;
+    const llm = createProvider(this.provider as ProviderType);
+    const response = await llm.chatCompletion({
+      messages: [
+        { role: "system", content: "Extract key factual claims from the text as a JSON list of strings." },
+        { role: "user", content: content }
+      ]
+    });
+    let claims = [];
+    try {
+      claims = JSON.parse(response.content || "[]");
+    } catch {
+      claims = [{ text: response.content }];
+    }
+    return { claims };
+  }
+
+  async analyzeCitations(args: any): Promise<any> {
+    const { claims, sources } = args;
+    return { analysis: `Analyzed ${claims?.length || 0} claims against ${sources?.length || 0} sources` };
+  }
+
+  async peerReview(args: any): Promise<any> {
+    const { dossier, criteria } = args;
+    const llm = createProvider(this.provider as ProviderType);
+    const response = await llm.chatCompletion({
+      messages: [
+        { role: "system", content: "Perform a peer review of the given research dossier." },
+        { role: "user", content: `Criteria: ${criteria?.join(", ")}\nDossier:\n${JSON.stringify(dossier).substring(0, 3000)}` }
+      ]
+    });
+    return { review: response.content };
+  }
+
+  async finalizeDossier(args: any): Promise<any> {
+    return { dossier: args.research, status: "finalized" };
   }
 
   async execute(input: ResearchInput): Promise<ResearchOutput> {
@@ -136,7 +195,7 @@ export class ResearchAgent {
     }
 
     // Generate summaries and analysis
-    const companySummary = this.generateCompanySummary(companyData, validatedInput);
+    const companySummary = await this.generateCompanySummary(companyData, validatedInput);
     const industryOverview = this.generateIndustryOverview(industryData);
     const risks = this.identifyRisks(validatedInput, industryData);
     const opportunities = this.identifyOpportunities(validatedInput, industryData);
@@ -154,6 +213,14 @@ export class ResearchAgent {
     };
 
     logger.info('Research Agent completed', { runId, sourcesCount: sources.length });
+
+    // Publish findings to chat
+    EventBus.getInstance().publish('chat:message:agent', {
+      agentId: 'research-agent',
+      content: `Research completed for "${validatedInput.brief.company}". Found ${sources.length} sources. Dossier ready.`,
+      role: 'agent',
+      timestamp: Date.now()
+    });
 
     return {
       dossier,
@@ -233,7 +300,7 @@ export class ResearchAgent {
       // Use webfetch tool to search via DuckDuckGo HTML (more reliable for scraping)
       // Added basic retry logic
       const result = await webfetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, 'text');
-      
+
       return [{
         query,
         content: result.content,
@@ -257,21 +324,21 @@ export class ResearchAgent {
 
     for (const result of data) {
       const lines = result.content.split('\n');
-      
+
       for (const line of lines) {
-        if (line.toLowerCase().includes('competitor') || 
+        if (line.toLowerCase().includes('competitor') ||
             line.toLowerCase().includes('competition') ||
             line.toLowerCase().includes('alternative')) {
-          
+
           const words = line.split(' ');
           for (let i = 0; i < words.length - 1; i++) {
             const potentialCompany = words[i] + ' ' + words[i + 1];
             // Cleaner logic: check length, uniqueness, and not the client company
-            if (potentialCompany.length > 3 && 
+            if (potentialCompany.length > 3 &&
                 !potentialCompany.toLowerCase().includes(input.brief.company.toLowerCase()) &&
                 !seen.has(potentialCompany) &&
                 /^[A-Z]/.test(potentialCompany)) { // Heuristic: Starts with Capital
-              
+
               competitors.push({
                 name: potentialCompany,
                 url: result.url,
@@ -279,7 +346,7 @@ export class ResearchAgent {
                 marketPosition: 'Established player'
               });
               seen.add(potentialCompany);
-              
+
               if (competitors.length >= 5) break;
             }
           }
@@ -334,15 +401,26 @@ export class ResearchAgent {
      target.thirdParty = merge(target.thirdParty, source.thirdParty);
   }
 
-  private generateCompanySummary(companyData: SearchResult[], input: ResearchInput): string {
-    const baseSummary = `${input.brief.company} operates in the ${input.brief.industry} industry.`;
-    
-    if (input.brief.description) {
-      return `${baseSummary} ${input.brief.description}`;
-    }
+    private async generateCompanySummary(companyData: SearchResult[], input: ResearchInput): Promise<string> {
+    try {
+      // Use configured provider (default openai)
+      // Note: In real app, provider should be injected via constructor
+      const llm = createProvider(this.provider as ProviderType);
 
-    const keyPoints = companyData.slice(0, 2).map(d => d.content.substring(0, 100).trim());
-    return `${baseSummary} Based on available information: ${keyPoints.join('. ')}`;
+      const context = companyData.map(d => d.content).join('\n\n').substring(0, 4000);
+
+      const response = await llm.chatCompletion({
+        messages: [
+          { role: 'system', content: 'You are a senior research analyst. Summarize the company profile based on the provided search results.' },
+          { role: 'user', content: `Company: ${input.brief.company}\nIndustry: ${input.brief.industry}\nContext:\n${context}` }
+        ]
+      });
+
+      return response.content || `${input.brief.company} operates in the ${input.brief.industry} industry.`;
+    } catch (error) {
+      console.error('LLM generation failed, falling back to basic summary', error);
+      return `${input.brief.company} operates in the ${input.brief.industry} industry.`;
+    }
   }
 
   private generateIndustryOverview(industryData: SearchResult[]): string {
@@ -352,14 +430,14 @@ export class ResearchAgent {
 
   private identifyRisks(input: ResearchInput, industryData: SearchResult[]): string[] {
     const risks = [];
-    
+
     if (input.brief.constraints) {
       risks.push(...input.brief.constraints);
     }
 
     const riskKeywords = ['risk', 'challenge', 'threat', 'concern'];
     const content = industryData.map(d => d.content).join(' ').toLowerCase();
-    
+
     for (const keyword of riskKeywords) {
       if (content.includes(keyword)) {
         risks.push(`Industry ${keyword} identified in market analysis`);
@@ -372,10 +450,10 @@ export class ResearchAgent {
 
   private identifyOpportunities(input: ResearchInput, industryData: SearchResult[]): string[] {
     const opportunities = [];
-    
+
     const oppKeywords = ['opportunity', 'growth', 'trend', 'innovation'];
     const content = industryData.map(d => d.content).join(' ').toLowerCase();
-    
+
     for (const keyword of oppKeywords) {
       if (content.includes(keyword)) {
         opportunities.push(`Industry ${keyword} identified in market analysis`);
@@ -391,11 +469,11 @@ export class ResearchAgent {
 
   private generateRecommendations(input: ResearchInput, data: { risks: string[], opportunities: string[], techStack: TechStack }): string[] {
     const recommendations = [];
-    
+
     if (data.risks.length > 0) {
       recommendations.push('Address identified risks through mitigation strategies');
     }
-    
+
     if (data.opportunities.length > 0) {
       recommendations.push('Leverage identified opportunities for competitive advantage');
     }

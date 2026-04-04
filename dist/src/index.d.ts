@@ -1,38 +1,41 @@
 /**
- * OpenCode Tools - TUI Integration Entry Point
+ * OpenCode Tools - MCP Integration Entry Point
  *
- * This module provides the integration point for OpenCode TUI.
- * All tools are registered here and made available exclusively through the TUI.
+ * This module provides the MCP server integration.
+ * All tools are registered through the runtime bootstrap system.
  */
-import { registerTUITools } from './tui-integration';
-import { TUIResearchAgent } from './tui-agents';
-export { registerTUITools };
-export { TUIResearchAgent };
-export type { ResearchParams, ResearchResult } from './tui-agents';
-export type { TUITool, TUIParameter } from './tui-integration';
 /**
- * Get all available TUI tools
+ * Initialize the runtime for MCP server
+ * This should be called when the MCP server starts
  */
-export declare function getAvailableTools(): import("./tui-integration").TUITool[];
+export declare function initForMCP(): import("./runtime/bootstrap").RuntimeBootstrapResult;
 /**
- * Execute a specific tool by ID (called by TUI)
+ * Get runtime status for MCP tools
  */
-export declare function executeTool(toolId: string, args: any): Promise<any>;
-/**
- * Research tool shortcuts for TUI
- */
-export declare const researchTools: {
-    /**
-     * Run interactive research (full TUI prompts)
-     */
-    interactive(): Promise<void>;
-    /**
-     * Run research from brief file
-     */
-    fromBrief(briefPath: string, outputPath?: string): Promise<import("./tui-agents").ResearchResult>;
-    /**
-     * Run quick research
-     */
-    quick(company: string, industry: string, description?: string): Promise<import("./tui-agents").ResearchResult>;
+export declare function getStatus(): {
+    initialized: boolean;
+    pluginCount: number;
+    agentCount: number;
+    commandCount: number;
+    fsBasePath: string | undefined;
+    foundryBridgeHealthy: boolean | null;
+    errors: string[];
+    timestamp: string;
 };
+/**
+ * List available tools for MCP
+ */
+export declare function getTools(): {
+    name: string;
+    description: string;
+}[];
+/**
+ * Execute a command by ID
+ */
+export declare function executeCommand(commandId: string, args?: string[]): Promise<any>;
+/**
+ * Get the runtime instance
+ */
+export { getRuntime } from './runtime/bootstrap';
+export { initializeRuntime, runtimeHealthCheck, listRuntimeTools } from './runtime/bootstrap';
 //# sourceMappingURL=index.d.ts.map

@@ -4,7 +4,8 @@ import { ToolCache } from './cache';
 import { ReplayManager } from './replay';
 import { ToolCallRecord } from '../types/run';
 import { PolicyViolationError } from './errors';
-import { redactor } from '../security/redaction';
+import { redactText } from '../security/redaction';
+import { normalizeToolResponseEnvelope, ToolResponseEnvelopeSchema } from './tool-response';
 
 export class ToolWrapper {
   private runStore: RunStore;
@@ -31,7 +32,8 @@ export class ToolWrapper {
       const cached = await this.replayManager.getReplay(toolId, args, version);
       if (cached) {
         console.log(`[Replay] Using cached result for ${toolId}`);
-        return cached as TResult;
+        const parsed = ToolResponseEnvelopeSchema.safeParse(cached);
+        return (parsed.success ? parsed.data.data : cached) as TResult;
       }
       throw new Error(`[Replay] No cached result found for ${toolId}`);
     }
@@ -40,16 +42,19 @@ export class ToolWrapper {
     // For now, we assume args are safe or will be redacted in logs.
     
     let result: TResult | undefined;
+    let envelope: ReturnType<typeof normalizeToolResponseEnvelope<TResult>> | undefined;
     let error: any;
     let success = false;
 
     try {
-      result = await implementation(args);
+      const rawResult = await implementation(args);
+      envelope = normalizeToolResponseEnvelope(toolId, rawResult, this.runStore.getContext().runId);
+      result = envelope.data as TResult;
       success = true;
 
       // Cache successful result
       const cacheKey = this.cache.getCacheKey(toolId, args, version);
-      await this.cache.set(cacheKey, result);
+      await this.cache.set(cacheKey, envelope);
 
     } catch (err: any) {
       error = err;
@@ -64,7 +69,7 @@ export class ToolWrapper {
         timestamp: new Date().toISOString(),
         durationMs: duration,
         success,
-        output: result, // Can be undefined if tool threw before returning
+        output: envelope ?? result,
         error: error ? { message: error.message, stack: error.stack } : undefined
       };
 

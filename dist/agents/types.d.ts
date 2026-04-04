@@ -10,6 +10,11 @@ export interface ProjectScaffoldResult {
     success: boolean;
     log: string;
     filesCreated: string[];
+    metadata?: {
+        runId: string;
+        generatedAt: string;
+        inputHash: string;
+    };
 }
 export interface TestCase {
     id: string;
@@ -41,6 +46,11 @@ export interface TestPlanResult {
     testPlan: string;
     unitTestCode: string;
     staticAnalysisReport: StaticAnalysisReport;
+    metadata?: {
+        runId: string;
+        generatedAt: string;
+        evidence: string[];
+    };
 }
 export interface StaticAnalysisReport {
     summary: string;

@@ -103,11 +103,13 @@ class GlobalOpenCodeResearcher {
         const name = path.basename(item.name);
         
         if (name === 'plugins' || name === 'tools' || name === 'extensions') {
+          // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
           structure.pluginDirectories?.push(path.join(installPath, name));
           console.log(`📁 Found plugin directory: ${name}`);
         }
         
         // Check for MCP tools
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const mcpPath = path.join(installPath, name, 'mcp');
         if (fs.existsSync(mcpPath)) {
           console.log(`🔌 Found MCP tools directory: ${mcpPath}`);

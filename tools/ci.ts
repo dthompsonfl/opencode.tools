@@ -1,7 +1,7 @@
 // tools/ci.ts
 import { logToolCall } from './audit';
+import { resolveRunContext } from '../src/runtime/run-context';
 
-const RUN_ID = 'mock-run-123';
 
 /**
  * E4: Repo operations / ci
@@ -11,6 +11,7 @@ export async function verify(projectPath: string, checks: ('lint' | 'test' | 'ty
     success: boolean; 
     results: { check: string; status: 'pass' | 'fail'; output?: string }[] 
 }> {
+    const context = resolveRunContext();
     console.log(`[CI.verify] Running quality gates for ${projectPath}...`);
     
     const results: any[] = checks.map(check => ({
@@ -21,6 +22,6 @@ export async function verify(projectPath: string, checks: ('lint' | 'test' | 'ty
 
     const success = results.every(r => r.status === 'pass');
 
-    await logToolCall(RUN_ID, 'ci.verify', { checks }, { success });
+    await logToolCall(context.runId, 'ci.verify', { checks }, { success });
     return { success, results };
 }

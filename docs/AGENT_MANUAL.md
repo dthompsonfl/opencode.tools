@@ -58,6 +58,9 @@ The system enforces policies defined in \`mcp/governance-policy.json\`.
 | \`Research_Integrity\` | \`research.dossier.finalize\` | All factual claims must be supported by evidence. | Citation Required Enforcement (G1) |
 | \`Proposal_Compliance\` | \`proposal.package.export\` | Proposal must contain explicit Assumptions and Exclusions. | Legal/Delivery Gate (G1) |
 | \`PII_Security\` | \`proposal.package.export\` | If PII is handled, security appendix and secret scan must pass. | Compliance Traceability (G2, G3) |
+| \`Deliverable_Scope\` | Foundry release review + quality gates | Final output scope is code/docs/tests only; generated artifacts are rejected unless allow-listed. | Production readiness and release hygiene |
+
+Reference policy document: `docs/PRODUCTION_DELIVERABLE_POLICY.md`.
 
 ## 5. Developer Experience (H)
 

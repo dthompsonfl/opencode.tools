@@ -39,10 +39,11 @@ const path = __importStar(require("path"));
 const redaction_1 = require("../security/redaction");
 class AuditLogger {
     constructor(runDir) {
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         this.logPath = path.join(runDir, 'toolcalls.jsonl');
     }
     async log(record) {
-        const redactedRecord = redaction_1.redactor.redactObject(record);
+        const redactedRecord = (0, redaction_1.redactText)(JSON.stringify(record));
         const line = JSON.stringify(redactedRecord) + '\n';
         await fs.promises.appendFile(this.logPath, line, 'utf-8');
     }

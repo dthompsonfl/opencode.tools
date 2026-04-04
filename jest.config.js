@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/tests', '<rootDir>/src', '<rootDir>/agents', '<rootDir>/tools'],
+  roots: ['<rootDir>/tests', '<rootDir>/src', '<rootDir>/agents', '<rootDir>/tools', '<rootDir>/foundry/foundry'],
   testMatch: [
     '**/__tests__/**/*.ts',
     '**/?(*.)+(spec|test).ts'
@@ -16,6 +16,8 @@ module.exports = {
     'node_modules/(?!(uuid|mermaid|sharp))'
   ],
   moduleNameMapper: {
+    '^@foundry/(.*)$': '<rootDir>/foundry/foundry/$1',
+    '^foundry/(.*)$': '<rootDir>/foundry/foundry/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@agents/(.*)$': '<rootDir>/agents/$1',
     '^@tools/(.*)$': '<rootDir>/tools/$1',

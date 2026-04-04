@@ -1,9 +1,19 @@
 import { logger } from '../../src/runtime/logger';
 import { ResearchDossier } from '../research/types';
+import * as crypto from 'crypto';
+import { resolveRunContext } from '../../src/runtime/run-context';
 
 export interface Documents {
     prd: string;
     sow: string;
+    metadata?: {
+        runId: string;
+        generatedAt: string;
+        provenance: {
+            briefHash: string;
+            dossierHash: string;
+        };
+    };
 }
 
 export class DocumentationAgent {
@@ -15,25 +25,43 @@ export class DocumentationAgent {
      * Generates a PRD and SOW based on research findings.
      */
     public async generateDocuments(dossier: ResearchDossier, brief: string): Promise<Documents> {
+        const context = resolveRunContext();
+        const generatedAt = new Date().toISOString();
         logger.info('Documentation Agent started', { agent: this.agentName, company: dossier.companySummary.split(' ')[0] });
 
         // Logic to construct a professional PRD
-        const prd = this.constructPRD(dossier, brief);
+        const prd = this.constructPRD(dossier, brief, generatedAt);
         
         // Logic to construct a professional SOW
-        const sow = this.constructSOW(dossier, brief);
+        const sow = this.constructSOW(dossier, brief, generatedAt);
 
         logger.info('Documentation Agent completed', { agent: this.agentName });
 
-        return { prd, sow };
+        return {
+            prd,
+            sow,
+            metadata: {
+                runId: context.runId,
+                generatedAt,
+                provenance: {
+                    briefHash: crypto.createHash('sha256').update(brief).digest('hex'),
+                    dossierHash: crypto.createHash('sha256').update(JSON.stringify(dossier)).digest('hex')
+                }
+            }
+        };
     }
 
-    private constructPRD(dossier: ResearchDossier, _brief: string): string {
+    private constructPRD(dossier: ResearchDossier, brief: string, generatedAt: string): string {
         return `
 # Product Requirements Document (PRD)
 
+Generated: ${generatedAt}
+
 ## Project Overview
 ${dossier.companySummary}
+
+## Client Brief Context
+${brief}
 
 ## Industry Analysis
 ${dossier.industryOverview}
@@ -51,12 +79,18 @@ ${dossier.risks.map(r => `- ${r}`).join('\n')}
 
 ## Strategic Recommendations
 ${dossier.recommendations.map(rec => `- ${rec}`).join('\n')}
+
+## Traceability
+- Inputs: research dossier + client brief
+- Evidence links: ${dossier.competitors.length} competitor references, ${dossier.risks.length} risk references
 `;
     }
 
-    private constructSOW(dossier: ResearchDossier, brief: string): string {
+    private constructSOW(dossier: ResearchDossier, brief: string, generatedAt: string): string {
         return `
 # Statement of Work (SOW)
+
+Generated: ${generatedAt}
 
 ## Project Scope
 Implementation of a strategic solution based on the requirements identified in the PRD for ${brief.substring(0, 50)}...
@@ -69,7 +103,22 @@ Implementation of a strategic solution based on the requirements identified in t
 
 ## Timeline
 Estimated delivery: 8-12 weeks from project kickoff.
+
+## Quality Gates
+1. Architecture review complete
+2. Security controls verified for listed risks (${dossier.risks.length})
+3. Delivery readiness checklist approved
 `;
+    }
+
+    public async generatePRD(dossier: ResearchDossier, brief: string): Promise<string> {
+        const docs = await this.generateDocuments(dossier, brief);
+        return docs.prd;
+    }
+
+    public async generateSOW(dossier: ResearchDossier, brief: string): Promise<string> {
+        const docs = await this.generateDocuments(dossier, brief);
+        return docs.sow;
     }
 }
 

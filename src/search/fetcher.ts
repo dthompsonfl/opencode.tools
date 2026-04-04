@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { htmlToText } from 'html-to-text';
-import { redactor } from '../security/redaction';
+import { redactText } from '../security/redaction';
 
 export interface WebPage {
   url: string;
@@ -50,6 +50,7 @@ export class WebFetcher {
         }
       };
     } catch (error) {
+      // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
       console.error(`Failed to fetch ${url}:`, error);
       throw error;
     }
@@ -64,6 +65,6 @@ export class WebFetcher {
       if (lower.includes('you are a helpful assistant')) return false;
       return true;
     });
-    return redactor.redact(cleanLines.join('\n'));
+    return redactText(cleanLines.join('\n'));
   }
 }

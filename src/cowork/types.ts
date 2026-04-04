@@ -83,12 +83,14 @@ export interface HookDefinition {
     id?: string;
     name: string;
     events: HookEvent[];
+    type?: 'command' | 'script' | string;
     command: string;
     timeoutMs?: number;
 }
 
 export interface HookContext {
-    event: HookEvent;
+    event?: HookEvent;
+    eventName?: HookEvent;
     [key: string]: unknown;
 }
 
@@ -105,6 +107,7 @@ export interface CommandDefinition {
     allowedTools?: string[];
     model?: string;
     argumentHint?: string;
+    handler?: (args: string[]) => Promise<CoworkCommandResult>;
 }
 
 export interface AgentDefinition {

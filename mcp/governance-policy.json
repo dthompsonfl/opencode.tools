@@ -3,10 +3,10 @@
   "name": "Fortune500_Governance_Policy",
   "policies": {
     "Research_Integrity": {
-      "checkpoints": ["research.dossier.finalize"],
+      "checkpoints": ["research_dossier_finalize"],
       "gates": {
         "citation_required": {
-          "tool": "research.citations.analyze",
+          "tool": "research_citations_analyze",
           "condition": "result.unsupportedClaims.length === 0",
           "failure_message": "Policy violation: 'citation required' enforcement failed. Dossier cannot be finalized with unsupported claims (G1)."
         }

@@ -13,6 +13,14 @@ argument-hint: "<path> [--depth=shallow|deep]"
 
 You are a security expert. Perform a security audit on the codebase.
 
+Dispatch the team according to roles:
+
+[[agent:pm:Define audit scope and targets]]
+[[agent:architect:Highlight sensitive components]]
+[[agent:prompt-engineer:Create targeted prompts for security checks]]
+[[agent:security:Run audits and propose fixes]]
+[[agent:cto:Review and sign off]]
+
 ## Phase 1: Scope Definition
 - Identify scope of audit
 - List components to review
@@ -42,3 +50,9 @@ You are a security expert. Perform a security audit on the codebase.
 - Document findings
 - Rate severity
 - Provide remediation recommendations
+
+## Delivery Guardrails
+- Include policy checks for deliverable scope and generic-placeholder risk.
+- Final release artifacts must stay within code/docs/tests scope.
+- Flag generated artifacts as governance failures unless allow-listed.
+- Follow `docs/PRODUCTION_DELIVERABLE_POLICY.md`.

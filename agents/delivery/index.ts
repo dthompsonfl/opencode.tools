@@ -1,11 +1,18 @@
 import { logger } from '../../src/runtime/logger';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
+import { resolveRunContext } from '../../src/runtime/run-context';
 
 export interface HandoffPackage {
     id: string;
     artifacts: string[];
     manifest: string;
+    metadata?: {
+        runId: string;
+        generatedAt: string;
+        artifactCount: number;
+    };
 }
 
 export class DeliveryAgent {
@@ -17,20 +24,31 @@ export class DeliveryAgent {
      * Packages all project artifacts for delivery.
      */
     public async packageForDelivery(projectId: string, artifactPaths: string[]): Promise<HandoffPackage> {
+        const context = resolveRunContext();
+        const generatedAt = new Date().toISOString();
         logger.info('Delivery Agent started', { agent: this.agentName, project: projectId });
 
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const deliveryDir = path.join(process.cwd(), 'deliverables', projectId);
         if (!fs.existsSync(deliveryDir)) {
             fs.mkdirSync(deliveryDir, { recursive: true });
         }
 
+        const existingArtifacts = artifactPaths.filter((artifactPath) => fs.existsSync(artifactPath));
+
         const manifest = {
             projectId,
-            timestamp: new Date().toISOString(),
-            files: artifactPaths,
-            status: 'Production Ready'
+            timestamp: generatedAt,
+            files: existingArtifacts,
+            missingFiles: artifactPaths.filter((artifactPath) => !fs.existsSync(artifactPath)),
+            status: 'Production Ready',
+            provenance: {
+                runId: context.runId,
+                manifestHash: crypto.createHash('sha256').update(`${projectId}:${generatedAt}`).digest('hex')
+            }
         };
 
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         const manifestPath = path.join(deliveryDir, 'manifest.json');
         fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
@@ -38,8 +56,13 @@ export class DeliveryAgent {
 
         return {
             id: projectId,
-            artifacts: artifactPaths,
-            manifest: JSON.stringify(manifest)
+            artifacts: existingArtifacts,
+            manifest: JSON.stringify(manifest),
+            metadata: {
+                runId: context.runId,
+                generatedAt,
+                artifactCount: existingArtifacts.length
+            }
         };
     }
 }

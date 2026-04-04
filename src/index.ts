@@ -1,102 +1,47 @@
 /**
- * OpenCode Tools - TUI Integration Entry Point
+ * OpenCode Tools - MCP Integration Entry Point
  * 
- * This module provides the integration point for OpenCode TUI.
- * All tools are registered here and made available exclusively through the TUI.
+ * This module provides the MCP server integration.
+ * All tools are registered through the runtime bootstrap system.
  */
 
-import { registerTUITools } from './tui-integration';
-import { discoverBundledPlugins, discoverSystemPlugins } from './plugins/discovery';
-import { TUIResearchAgent } from './tui-agents';
-
-// Export the tool registration function
-export { registerTUITools };
-
-// Export individual agents for direct TUI access if needed
-export { TUIResearchAgent };
-
-// Export types
-export type { ResearchParams, ResearchResult } from './tui-agents';
-export type { TUITool, TUIParameter } from './tui-integration';
+import { initializeRuntime, runtimeHealthCheck, listRuntimeTools, getRuntime } from './runtime/bootstrap';
 
 /**
- * Get all available TUI tools
+ * Initialize the runtime for MCP server
+ * This should be called when the MCP server starts
  */
-export function getAvailableTools() {
-  // Also include discovered plugin manifests as metadata
-  const tools = registerTUITools();
-  try {
-    const manifests = discoverBundledPlugins();
-    for (const m of manifests) {
-      tools.push({ id: m.id, name: m.name, description: `Discovered plugin (${m.adapterType})`, category: 'research', handler: async () => ({ manifest: m }) });
-    }
-
-    // Also include any plugins already registered in the user's OpenCode home
-    const system = discoverSystemPlugins();
-    for (const m of system) {
-      tools.push({ id: m.id, name: m.name, description: `System-registered plugin (${m.adapterType})`, category: 'research', handler: async () => ({ manifest: m }) });
-    }
-  } catch (err) {
-    // ignore
-  }
-
-  return tools;
+export function initForMCP() {
+  return initializeRuntime({
+    eagerInit: true,
+    verbose: process.env.DEBUG === 'true',
+  });
 }
 
 /**
- * Execute a specific tool by ID (called by TUI)
+ * Get runtime status for MCP tools
  */
-export async function executeTool(toolId: string, args: any): Promise<any> {
-  const tools = registerTUITools();
-  const tool = tools.find(t => t.id === toolId);
-  
-  if (!tool) {
-    throw new Error(`Tool not found: ${toolId}`);
-  }
-  
-  return await tool.handler(args);
+export function getStatus() {
+  return runtimeHealthCheck();
 }
 
 /**
- * Research tool shortcuts for TUI
+ * List available tools for MCP
  */
-export const researchTools = {
-  /**
-   * Run interactive research (full TUI prompts)
-   */
-  async interactive() {
-    const agent = new TUIResearchAgent();
-    await agent.runInteractive();
-  },
-  
-  /**
-   * Run research from brief file
-   */
-  async fromBrief(briefPath: string, outputPath?: string) {
-    const agent = new TUIResearchAgent();
-    // Implementation would handle file reading
-    const params = await loadBriefFromFile(briefPath);
-    return agent.runWithParams(params);
-  },
-  
-  /**
-   * Run quick research
-   */
-  async quick(company: string, industry: string, description?: string) {
-    const agent = new TUIResearchAgent();
-    return agent.runWithParams({
-      company,
-      industry,
-      description: description || `${company} operates in the ${industry} industry.`
-    });
-  }
-};
+export function getTools() {
+  return listRuntimeTools();
+}
 
 /**
- * Helper function to load brief from file
+ * Execute a command by ID
  */
-async function loadBriefFromFile(briefPath: string): Promise<any> {
-  const fs = await import('fs');
-  const content = await fs.promises.readFile(briefPath, 'utf-8');
-  return JSON.parse(content);
+export async function executeCommand(commandId: string, args?: string[]): Promise<any> {
+  const runtime = getRuntime();
+  return runtime.commandRegistry.execute(commandId, args);
 }
+
+/**
+ * Get the runtime instance
+ */
+export { getRuntime } from './runtime/bootstrap';
+export { initializeRuntime, runtimeHealthCheck, listRuntimeTools } from './runtime/bootstrap';

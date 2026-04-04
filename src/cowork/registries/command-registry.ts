@@ -5,12 +5,17 @@
  * Provides singleton pattern for global command access.
  */
 
-import { CoworkCommand, CoworkCommandResult, RegistryEntry } from '../types';
+import {
+  CoworkCommand,
+  CoworkCommandResult,
+  RegistryEntry,
+  CommandDefinition,
+} from '../types';
 import { logger } from '../../runtime/logger';
 
 export class CommandRegistry {
   private static instance: CommandRegistry;
-  private commands: Map<string, RegistryEntry<CoworkCommand>>;
+  private commands: Map<string, RegistryEntry<CommandDefinition>>;
   
   private constructor() {
     this.commands = new Map();
@@ -29,7 +34,7 @@ export class CommandRegistry {
   /**
    * Register a single command
    */
-  public register(command: CoworkCommand, source?: string): void {
+  public register(command: CoworkCommand | CommandDefinition, source?: string): void {
     if (this.commands.has(command.id)) {
       logger.warn(`Command with id '${command.id}' already registered, overwriting`);
     }
@@ -47,7 +52,7 @@ export class CommandRegistry {
   /**
    * Register multiple commands
    */
-  public registerMany(commands: CoworkCommand[], source?: string): void {
+  public registerMany(commands: Array<CoworkCommand | CommandDefinition>, source?: string): void {
     for (const command of commands) {
       this.register(command, source);
     }
@@ -67,7 +72,7 @@ export class CommandRegistry {
   /**
    * Get a command by id
    */
-  public get(commandId: string): CoworkCommand | undefined {
+  public get(commandId: string): CommandDefinition | undefined {
     const entry = this.commands.get(commandId);
     return entry?.item;
   }
@@ -75,13 +80,20 @@ export class CommandRegistry {
   /**
    * Get a command by name (or ID)
    */
-  public getByName(name: string): CoworkCommand | undefined {
+  public getByName(name: string): CommandDefinition | undefined {
+    const normalizedName = name.trim().toLowerCase();
+
     // Try getting by ID first
     const byId = this.get(name);
     if (byId) return byId;
 
+    const byNormalizedId = this.get(normalizedName);
+    if (byNormalizedId) return byNormalizedId;
+
     // Search by name property
-    return Array.from(this.commands.values()).find(entry => entry.item.name === name)?.item;
+    return Array.from(this.commands.values()).find(
+      (entry) => entry.item.name.trim().toLowerCase() === normalizedName
+    )?.item;
   }
   
   /**
@@ -106,7 +118,8 @@ export class CommandRegistry {
     
     try {
       logger.debug(`Executing command: ${command.name}`, { args });
-      const result = await command.handler(args);
+      const handler = command.handler || this.createFallbackHandler(command);
+      const result = await handler(args);
       logger.debug(`Command executed successfully: ${command.name}`);
       return result;
     } catch (error) {
@@ -122,7 +135,7 @@ export class CommandRegistry {
   /**
    * List all registered commands
    */
-  public list(): CoworkCommand[] {
+  public list(): CommandDefinition[] {
     return Array.from(this.commands.values()).map(entry => entry.item);
   }
   
@@ -146,5 +159,25 @@ export class CommandRegistry {
    */
   public count(): number {
     return this.commands.size;
+  }
+
+  /**
+   * Backward-compatible alias for count()
+   */
+  public size(): number {
+    return this.count();
+  }
+
+  private createFallbackHandler(command: CommandDefinition): (args: string[]) => Promise<CoworkCommandResult> {
+    return async (args: string[]): Promise<CoworkCommandResult> => {
+      return {
+        success: true,
+        data: {
+          commandId: command.id,
+          args,
+          body: command.body || '',
+        },
+      };
+    };
   }
 }

@@ -12,12 +12,22 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => 'test-uuid-123')
 }));
 
+const mockInitializeCoworkPersistence = jest.fn();
+jest.mock('../../../../src/cowork/persistence', () => {
+  const actual = jest.requireActual('../../../../src/cowork/persistence');
+  return {
+    ...actual,
+    initializeCoworkPersistence: (...args: unknown[]) => mockInitializeCoworkPersistence(...args),
+  };
+});
+
 describe('CoworkOrchestrator', () => {
   let orchestrator: CoworkOrchestrator;
   let commandRegistry: CommandRegistry;
   let agentRegistry: AgentRegistry;
 
   beforeEach(() => {
+    mockInitializeCoworkPersistence.mockReset();
     orchestrator = new CoworkOrchestrator();
     commandRegistry = CommandRegistry.getInstance();
     agentRegistry = AgentRegistry.getInstance();
@@ -117,6 +127,74 @@ describe('CoworkOrchestrator', () => {
 
       expect(result.metadata.agentIds).toHaveLength(2);
       expect(result.metadata.allSucceeded).toBe(true);
+    });
+  });
+
+  describe('direct messaging', () => {
+    it('delivers messages even when agents are not currently active', async () => {
+      // Allow pm to architect message for this test
+      (orchestrator as any).coordinator.directMessagePolicy = { defaultAllow: true };
+
+      agentRegistry.register({
+        id: 'pm',
+        name: 'Project Manager',
+        description: 'PM agent',
+        body: 'You are a project manager.',
+      });
+      agentRegistry.register({
+        id: 'architect',
+        name: 'Architect',
+        description: 'Architect agent',
+        body: 'You are an architect.',
+      });
+
+      const inbox: Array<{ from: string; type: string; payload: unknown }> = [];
+      const unsubscribe = orchestrator.subscribeAgentInbox('architect', (from, type, payload) => {
+        inbox.push({ from, type, payload });
+      });
+
+      const envelope = await orchestrator.sendAgentMessage('pm', 'architect', 'handoff', { done: true });
+
+      expect(envelope.from).toBe('pm');
+      expect(envelope.to).toBe('architect');
+      expect(inbox).toHaveLength(1);
+      expect(inbox[0].from).toBe('pm');
+      expect(inbox[0].type).toBe('handoff');
+
+      unsubscribe();
+    });
+
+    it('rejects direct messages for agents missing from the registry', async () => {
+      await expect(
+        orchestrator.sendAgentMessage('unknown-a', 'unknown-b', 'handoff', { done: true }),
+      ).rejects.toThrow('not registered in the agent registry');
+    });
+  });
+
+
+  describe('persistence bootstrapping', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      process.env = {
+        ...originalEnv,
+      };
+    });
+
+    afterEach(() => {
+      process.env = originalEnv;
+    });
+
+    it('fails fast when persistence is required but unavailable', async () => {
+      process.env.COWORK_PERSISTENCE_REQUIRED = 'true';
+      process.env.COWORK_PERSISTENCE_CONNECTION_STRING = 'postgres://required-but-unavailable';
+      mockInitializeCoworkPersistence.mockRejectedValueOnce(new Error('db unavailable'));
+
+      const requiredOrchestrator = new CoworkOrchestrator();
+
+      await expect(requiredOrchestrator.awaitPersistenceBootstrap()).rejects.toThrow(
+        'Persistent Cowork storage is required but unavailable',
+      );
     });
   });
 

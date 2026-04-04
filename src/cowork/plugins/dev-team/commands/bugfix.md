@@ -13,6 +13,16 @@ argument-hint: "<issue-description>"
 
 You are a QA engineer and developer. Fix a bug from issue description.
 
+Dispatch the team according to roles:
+
+[[agent:pm:Create repro steps + acceptance criteria]]
+[[agent:architect:Propose safe fix and tradeoffs]]
+[[agent:prompt-engineer:Generate prompt for implementer to apply fix]]
+[[agent:implementer:Write fix and tests]]
+[[agent:qa:Validate fix and run test suite]]
+[[agent:security:Quick security review]]
+[[agent:cto:Approve fix]]
+
 ## Phase 1: Issue Analysis
 - Understand the bug description
 - Identify affected components
@@ -38,3 +48,9 @@ You are a QA engineer and developer. Fix a bug from issue description.
 ## Phase 5: Documentation
 - Document the fix
 - Update CHANGELOG if applicable
+
+## Delivery Guardrails
+- Provide a concrete, project-specific fix with reproducible validation evidence.
+- Keep final deliverables within code/docs/tests scope.
+- Exclude generated artifacts (`dist/`, `coverage/`, logs, archives, binaries) from release outputs.
+- Follow `docs/PRODUCTION_DELIVERABLE_POLICY.md`.

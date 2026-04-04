@@ -1,18 +1,19 @@
 // tools/docs.ts
 import { logToolCall } from './audit';
+import { resolveRunContext } from '../src/runtime/run-context';
 
-const RUN_ID = 'mock-run-123';
 
 /**
  * Generates a PRD based on research and discovery artifacts.
  */
 export async function generatePRD(researchDossier: any, discoverySession: any): Promise<{ prd: string }> {
+    const context = resolveRunContext();
     console.log("[Docs.generatePRD] Synthesizing PRD with traceability to research claims.");
     
     // Logic: Map research claims and discovery decisions to feature requirements.
     const prd = `# Product Requirements Document\n\n## 1. Executive Summary\n\nDerived from research finding: ${researchDossier.dossier.substring(0, 50)}...\n\n## 2. Requirements\n\nBased on discovery: ${discoverySession.artifacts[0].content}`;
 
-    await logToolCall(RUN_ID, 'docs.prd.generate', { research_id: 'res-1', disc_id: 'sess-1' }, { prd_length: prd.length });
+    await logToolCall(context.runId, 'docs.prd.generate', { research_id: 'res-1', disc_id: 'sess-1' }, { prd_length: prd.length });
     return { prd };
 }
 
@@ -20,10 +21,11 @@ export async function generatePRD(researchDossier: any, discoverySession: any): 
  * Generates an SOW (Scope of Work).
  */
 export async function generateSOW(proposalData: any): Promise<{ sow: string }> {
+    const context = resolveRunContext();
     console.log("[Docs.generateSOW] Creating contractual SOW with milestones and assumptions.");
     
     const sow = `# Statement of Work\n\n## 1. Milestones\n\n- M1: Research & Discovery\n- M2: Architecture & Backlog\n- M3: Implementation\n\n## 2. Assumptions & Exclusions\n\n- Assumption: Client provides API keys.\n- Exclusion: Production deployment not included in this phase.`;
 
-    await logToolCall(RUN_ID, 'docs.sow.generate', { proposal_id: 'prop-1' }, { sow_length: sow.length });
+    await logToolCall(context.runId, 'docs.sow.generate', { proposal_id: 'prop-1' }, { sow_length: sow.length });
     return { sow };
 }

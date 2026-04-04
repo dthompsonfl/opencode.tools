@@ -49,7 +49,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const archiver = __importStar(require("archiver"));
 const audit_1 = require("./audit");
-const RUN_ID = 'mock-run-123';
+const run_context_1 = require("../src/runtime/run-context");
 // Default hourly rates by role
 const HOURLY_RATES = {
     'Lead Developer': 150,
@@ -226,6 +226,7 @@ function calculateTimeline(phases) {
  * Generate proposal document
  */
 async function generateProposal(inputs) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log('[Proposal.generate] Generating proposal with real estimation logic.');
     // Extract project info with defaults
     const projectName = inputs?.projectName || inputs?.discovery?.projectName || 'New Project';
@@ -384,7 +385,7 @@ We look forward to working with you!
         securityAppendix: true,
         generatedAt: new Date().toISOString()
     };
-    await (0, audit_1.logToolCall)(RUN_ID, 'proposal.generate', {
+    await (0, audit_1.logToolCall)(context.runId, 'proposal.generate', {
         projectName: inputs.projectName,
         complexity: complexity.level
     }, {
@@ -398,6 +399,7 @@ We look forward to working with you!
  * Peer review of proposal
  */
 async function peerReview(proposal, reviewer) {
+    const context = (0, run_context_1.resolveRunContext)();
     let notes = '';
     let score = 0;
     const recommendations = [];
@@ -421,13 +423,14 @@ async function peerReview(proposal, reviewer) {
             recommendations.push('Add backup and disaster recovery specifications');
             break;
     }
-    await (0, audit_1.logToolCall)(RUN_ID, 'proposal.peer_review', { reviewer }, { score, recommendations: recommendations.length });
+    await (0, audit_1.logToolCall)(context.runId, 'proposal.peer_review', { reviewer }, { score, recommendations: recommendations.length });
     return { notes, score, recommendations };
 }
 /**
  * Export proposal package
  */
 async function packageExport(proposalData) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log('[Proposal.package.export] Packaging proposal documents.');
     const outputDir = path.join(process.cwd(), 'artifacts', 'client');
     if (!fs.existsSync(outputDir)) {
@@ -456,7 +459,7 @@ async function packageExport(proposalData) {
         }
         archive.finalize();
     });
-    await (0, audit_1.logToolCall)(RUN_ID, 'proposal.package.export', { timestamp }, {
+    await (0, audit_1.logToolCall)(context.runId, 'proposal.package.export', { timestamp }, {
         packagePath,
         filesIncluded: files.length
     });

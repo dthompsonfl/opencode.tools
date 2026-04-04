@@ -222,7 +222,7 @@ describe('PDFGeneratorAgent', () => {
             content: 'Content',
             charts: [
               {
-                id: 'invalid-uuid',
+                id: '',
                 type: 'bar',
                 title: 'Chart',
                 data: {
@@ -251,7 +251,7 @@ describe('PDFGeneratorAgent', () => {
             content: 'Content',
             diagrams: [
               {
-                id: 'invalid-uuid',
+                id: '',
                 type: 'flowchart',
                 title: 'Diagram',
                 definition: '',

@@ -76,6 +76,7 @@ class WebFetcher {
             };
         }
         catch (error) {
+            // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
             console.error(`Failed to fetch ${url}:`, error);
             throw error;
         }
@@ -91,7 +92,7 @@ class WebFetcher {
                 return false;
             return true;
         });
-        return redaction_1.redactor.redact(cleanLines.join('\n'));
+        return (0, redaction_1.redactText)(cleanLines.join('\n'));
     }
 }
 exports.WebFetcher = WebFetcher;

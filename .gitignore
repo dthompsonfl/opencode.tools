@@ -2,6 +2,13 @@ node_modules/
 dist/
 coverage/
 .jest-cache/
+test-results/
 *.log
+*.zip
+nul
 .DS_Store
 .venv/
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md

@@ -19,10 +19,10 @@ abstract class BaseValidator implements CouncilMember {
     } catch {
       // Fallback if not JSON
       return {
-        valid: true, // Default to pass in mock if parsing fails to avoid blocking
-        score: 0.8,
-        comment: responseContent,
-        issues: []
+        valid: false, // Fail closed for production readiness
+        score: 0.0,
+        comment: `Failed to parse validation response. Raw response: ${responseContent}`,
+        issues: ['Parsing Error']
       };
     }
   }

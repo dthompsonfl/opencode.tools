@@ -61,3 +61,18 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => '123e4567-e89b-12d3-a456-426614174000'), // Valid UUID
   v5: jest.fn(() => '123e4567-e89b-12d3-a456-426614174000'),
 }));
+
+beforeEach(() => {
+  const uuid = jest.requireMock('uuid') as {
+    v4?: jest.Mock;
+    v5?: jest.Mock;
+  };
+
+  if (uuid.v4 && typeof uuid.v4.mockImplementation === 'function') {
+    uuid.v4.mockImplementation(() => '123e4567-e89b-12d3-a456-426614174000');
+  }
+
+  if (uuid.v5 && typeof uuid.v5.mockImplementation === 'function') {
+    uuid.v5.mockImplementation(() => '123e4567-e89b-12d3-a456-426614174000');
+  }
+});
