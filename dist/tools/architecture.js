@@ -2,8 +2,18 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateArchitecture = generateArchitecture;
 exports.generateBacklog = generateBacklog;
+/**
+ * Architecture Tool - Real System Design
+ *
+ * Generates:
+ * - System architecture diagrams (Mermaid)
+ * - Component definitions
+ * - Data models
+ * - Security architecture
+ * - Project backlog
+ */
 const audit_1 = require("./audit");
-const RUN_ID = 'mock-run-123';
+const run_context_1 = require("../src/runtime/run-context");
 /**
  * Generate system context diagram (Mermaid)
  */
@@ -215,6 +225,7 @@ function generateSecurityModel(input) {
  * Generate architecture document
  */
 async function generateArchitecture(prd, constraints = []) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log('[Arch.generate] Generating system architecture.');
     // Extract input from PRD or use defaults
     const input = {
@@ -251,7 +262,7 @@ ${components.map(c => `- **${c.name}**: ${c.description}`).join('\n')}
 ## Compliance
 ${securityModel.compliance.map(c => `- ${c}`).join('\n') || 'None specified'}
 `;
-    await (0, audit_1.logToolCall)(RUN_ID, 'arch.generate', {
+    await (0, audit_1.logToolCall)(context.runId, 'arch.generate', {
         projectName: input.projectName
     }, {
         component_count: components.length,
@@ -270,42 +281,28 @@ ${securityModel.compliance.map(c => `- ${c}`).join('\n') || 'None specified'}
  * Generate backlog from architecture
  */
 async function generateBacklog(architecture) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log('[Arch.generateBacklog] Creating project backlog.');
+    const componentNames = (architecture?.components || []).map((component) => component.name);
+    const entityNames = (architecture?.dataModel?.entities || []).map((entity) => entity.name);
     const epics = [
         {
-            id: 'epic-infra',
-            title: 'Infrastructure Setup',
-            description: 'Set up cloud infrastructure and CI/CD',
+            id: 'epic-platform',
+            title: 'Platform Foundation',
+            description: `Provision runtime for ${componentNames.length || 1} core components`,
             priority: 'high',
             stories: [
                 {
-                    id: 'story-infra-1',
-                    title: 'Set up cloud environment',
+                    id: 'story-platform-ci',
+                    title: 'Establish CI and deployment controls',
                     tasks: [
-                        'Create AWS/GCP project',
-                        'Configure VPC networking',
-                        'Set up Kubernetes cluster',
-                        'Configure monitoring'
+                        'Configure CI checks for lint, test, and type safety',
+                        'Publish deployable artifact',
+                        'Add staged deployment gates'
                     ],
                     acceptanceCriteria: [
-                        'Cluster is accessible',
-                        'Monitoring is operational'
-                    ],
-                    sizing: 'L',
-                    priority: 'high'
-                },
-                {
-                    id: 'story-infra-2',
-                    title: 'Configure CI/CD pipeline',
-                    tasks: [
-                        'Set up GitHub Actions',
-                        'Configure build stages',
-                        'Add automated testing',
-                        'Configure deployment'
-                    ],
-                    acceptanceCriteria: [
-                        'Pipeline runs on PR',
-                        'Deploys to staging automatically'
+                        'CI is required on pull requests',
+                        'Deployment pipeline records release metadata'
                     ],
                     sizing: 'M',
                     priority: 'high'
@@ -313,73 +310,60 @@ async function generateBacklog(architecture) {
             ]
         },
         {
-            id: 'epic-auth',
-            title: 'Authentication System',
-            description: 'Implement user authentication and authorization',
+            id: 'epic-services',
+            title: 'Service Implementation',
+            description: `Implement and harden ${componentNames.length || 1} service components`,
             priority: 'high',
-            stories: [
-                {
-                    id: 'story-auth-1',
-                    title: 'Implement user registration',
-                    tasks: [
-                        'Create registration endpoint',
-                        'Add email verification',
-                        'Implement password hashing',
-                        'Add input validation'
-                    ],
-                    acceptanceCriteria: [
-                        'Users can register',
-                        'Email verification works',
-                        'Passwords are securely hashed'
-                    ],
-                    sizing: 'M',
-                    priority: 'high'
-                },
-                {
-                    id: 'story-auth-2',
-                    title: 'Implement login flow',
-                    tasks: [
-                        'Create login endpoint',
-                        'Implement JWT token generation',
-                        'Add session management',
-                        'Configure token refresh'
-                    ],
-                    acceptanceCriteria: [
-                        'Users can login',
-                        'Tokens are valid',
-                        'Sessions persist'
-                    ],
-                    sizing: 'M',
-                    priority: 'high'
-                }
-            ]
+            stories: componentNames.slice(0, 4).map((name, index) => ({
+                id: `story-svc-${index + 1}`,
+                title: `Implement ${name}`,
+                tasks: [
+                    `Define ${name} API contracts`,
+                    `Implement ${name} core responsibilities`,
+                    `Add observability and error handling for ${name}`
+                ],
+                acceptanceCriteria: [
+                    `${name} exposes documented interfaces`,
+                    `${name} includes automated test coverage`
+                ],
+                sizing: 'M',
+                priority: 'high'
+            }))
         },
         {
-            id: 'epic-core',
-            title: 'Core Features',
-            description: 'Implement main application features',
+            id: 'epic-data',
+            title: 'Data and Integrity',
+            description: `Deliver schema and persistence for ${entityNames.length || 1} entities`,
             priority: 'medium',
-            stories: [
-                {
-                    id: 'story-core-1',
-                    title: 'API endpoints implementation',
-                    tasks: [
-                        'Design RESTful endpoints',
-                        'Implement CRUD operations',
-                        'Add request validation',
-                        'Configure error handling'
-                    ],
-                    acceptanceCriteria: [
-                        'All endpoints return correct status',
-                        'Data validation works',
-                        'Errors are properly handled'
-                    ],
-                    sizing: 'L',
-                    priority: 'medium'
-                }
-            ]
+            stories: entityNames.slice(0, 4).map((name, index) => ({
+                id: `story-data-${index + 1}`,
+                title: `Implement ${name} persistence`,
+                tasks: [
+                    `Define ${name} schema and constraints`,
+                    `Create CRUD operations for ${name}`,
+                    `Add migration and rollback safety checks`
+                ],
+                acceptanceCriteria: [
+                    `${name} schema migrations are repeatable`,
+                    `${name} read/write paths are tested`
+                ],
+                sizing: 'M',
+                priority: 'medium'
+            }))
         }
-    ];
+    ].map((epic) => ({
+        ...epic,
+        stories: epic.stories.length > 0 ? epic.stories : [
+            {
+                id: `${epic.id}-seed`,
+                title: `Baseline ${epic.title} implementation`,
+                tasks: ['Establish baseline implementation', 'Define acceptance tests'],
+                acceptanceCriteria: ['Story is ready for execution'],
+                sizing: 'S',
+                priority: epic.priority
+            }
+        ]
+    }));
     const summary = `# Backlog Summary
 
 ## Epics
@@ -392,7 +376,7 @@ ${epics.reduce((sum, e) => sum + e.stories.length, 0)} stories across ${epics.le
 - High: ${epics.filter(e => e.priority === 'high').reduce((sum, e) => sum + e.stories.length, 0)} stories
 - Medium: ${epics.filter(e => e.priority === 'medium').reduce((sum, e) => sum + e.stories.length, 0)} stories
 `;
-    await (0, audit_1.logToolCall)(RUN_ID, 'backlog.generate', {
+    await (0, audit_1.logToolCall)(context.runId, 'backlog.generate', {
         epic_count: epics.length
     }, {
         story_count: epics.reduce((sum, e) => sum + e.stories.length, 0)

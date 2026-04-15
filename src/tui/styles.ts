@@ -1,14 +1,8 @@
-import { TextProps } from 'ink';
+import { COLORS as THEME_COLORS } from './theme';
 
 export const COLORS = {
-  primary: '#00BFFF', // DeepSkyBlue
-  secondary: '#FF69B4', // HotPink
-  success: '#32CD32', // LimeGreen
-  warning: '#FFD700', // Gold
-  error: '#FF4500', // OrangeRed
-  text: '#FFFFFF',
-  muted: '#808080',
-  border: '#444444',
+  ...THEME_COLORS,
+  // Add any missing ones or aliases
   highlight: '#1E90FF',
 };
 

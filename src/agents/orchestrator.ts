@@ -9,121 +9,103 @@ import { logger } from '../../src/runtime/logger';
 import { ResearchAgent } from '../../agents/research/research-agent';
 import { DocumentationAgent } from '../../agents/docs';
 import { ArchitectureAgent } from '../../agents/architecture';
+import { Blackboard } from '../cowork/orchestrator/blackboard';
+import { EventBus } from '../cowork/orchestrator/event-bus';
 
 export interface OrchestratorInput {
   project?: string;
+  intent?: string;
   mode?: 'research' | 'docs' | 'architect' | 'code' | 'full';
-  iterations?: number;
-}
-
-export interface OrchestratorOutput {
-  success: boolean;
-  phases: PhaseResult[];
-  artifacts: Record<string, unknown>;
-}
-
-export interface PhaseResult {
-  phase: string;
-  status: 'success' | 'failure' | 'in-progress';
-  output?: unknown;
-  errors?: string[];
 }
 
 export class OrchestratorAgent {
-  private phases: PhaseResult[] = [];
+  private blackboard: Blackboard;
+  private eventBus: EventBus;
   private artifacts: Record<string, unknown> = {};
 
-  async execute(input: OrchestratorInput): Promise<OrchestratorOutput> {
-    const { project = 'unnamed-project', mode = 'full' } = input;
+  constructor() {
+    this.blackboard = Blackboard.getInstance();
+    this.eventBus = EventBus.getInstance();
+  }
+
+  /**
+   * Refines a user intent into a structured mobilization plan
+   */
+  async refine(intent: string): Promise<string> {
+    logger.info('Refining intent', { intent });
+    // In a real scenario, this would call an LLM to decompose the intent
+    return `mobilization:planned: Decomposing project "${intent}". I will mobilize:
+1. Research Agent: To analyze the industry and competitors.
+2. Architecture Agent: To design the tech stack and system topology.
+3. CodeGen Agent: To scaffold the production-ready implementation.
+
+Does this plan meet your expectations?`;
+  }
+
+  async execute(input: OrchestratorInput): Promise<any> {
+    const { project = 'unnamed-project', mode = 'full', intent } = input;
     
-    logger.info('Orchestrator starting', { project, mode });
+    logger.info('Orchestrator mobilizing team', { project, mode });
+    this.blackboard.transitionTo('planning');
+    this.eventBus.publish('agent:mobilize', { team: ['researcher', 'architect', 'developer'] });
 
     try {
       // Phase 1: Research
       if (mode === 'full' || mode === 'research') {
-        await this.runPhase('research', async () => {
-          logger.info('Phase 1: Research - Gathering comprehensive dossier');
-          const agent = new ResearchAgent();
-          const result = await agent.execute({
-            brief: {
-              company: project,
-              industry: 'Technology',
-              description: 'Research project for comprehensive analysis',
-              goals: ['comprehensive research', 'competitor analysis']
-            }
-          });
-          this.artifacts.research = result;
-          return result;
+        this.updateActivity('research', 'thinking', 'Analyzing industry trends...');
+        const agent = new ResearchAgent();
+        const result = await agent.execute({
+          brief: {
+            company: project,
+            industry: 'Technology',
+            description: intent || 'Enterprise project',
+            goals: ['comprehensive research']
+          }
         });
+        this.blackboard.updateArtifact('research_dossier', result, 'researcher', 'document');
+        this.updateActivity('research', 'success', 'Dossier completed.');
       }
 
       // Phase 2: Documentation
       if (mode === 'full' || mode === 'docs') {
-        await this.runPhase('documentation', async () => {
-          logger.info('Phase 2: Documentation - Generating PRD and SOW');
-          if (!this.artifacts.research) {
-            throw new Error('Research phase must complete before documentation');
-          }
-          const agent = new DocumentationAgent();
-          const result = await agent.generateDocuments(
-            this.artifacts.research as any,
-            'Generate comprehensive documentation'
-          );
-          this.artifacts.prd = result.prd;
-          this.artifacts.sow = result.sow;
-          return result;
-        });
+        this.updateActivity('docs', 'working', 'Generating PRD/SOW...');
+        const dossier = this.blackboard.getArtifact('research_dossier');
+        const agent = new DocumentationAgent();
+        const result = await agent.generateDocuments(dossier as any, 'Refined intent implementation');
+        this.blackboard.updateArtifact('prd', result.prd, 'architect', 'spec');
+        this.updateActivity('docs', 'success', 'Specifications finalized.');
       }
 
       // Phase 3: Architecture
       if (mode === 'full' || mode === 'architect') {
-        await this.runPhase('architecture', async () => {
-          logger.info('Phase 3: Architecture - Designing system and backlog');
-          const agent = new ArchitectureAgent();
-          const result = await agent.execute({
-            prd_content: this.artifacts.prd as string || 'No PRD available'
-          });
-          this.artifacts.architecture = result;
-          return result;
-        });
+        this.updateActivity('architecture', 'working', 'Designing system topology...');
+        const prd = this.blackboard.getArtifact('prd');
+        const agent = new ArchitectureAgent();
+        const result = await agent.execute({ prd_content: prd as string });
+        this.blackboard.updateArtifact('architecture_diagram', result.architectureDiagram, 'architect', 'design');
+        this.updateActivity('architecture', 'success', 'System design completed.');
       }
 
-      logger.info('Orchestration completed successfully');
-
-      return {
-        success: true,
-        phases: this.phases,
-        artifacts: this.artifacts
-      };
+      this.blackboard.transitionTo('completed');
+      logger.info('Project development phase completed successfully');
+      
+      return { success: true };
     } catch (error) {
+      this.blackboard.transitionTo('failed');
       logger.error('Orchestration failed:', error);
-      return {
-        success: false,
-        phases: this.phases,
-        artifacts: this.artifacts
-      };
+      return { success: false, error };
     }
   }
 
-  private async runPhase(phaseName: string, action: () => Promise<unknown>): Promise<void> {
-    const phase: PhaseResult = {
-      phase: phaseName,
-      status: 'in-progress'
-    };
-    this.phases.push(phase);
-
-    try {
-      const output = await action();
-      phase.status = 'success';
-      phase.output = output;
-      logger.info(`Phase ${phaseName} completed successfully`);
-    } catch (error) {
-      phase.status = 'failure';
-      phase.errors = [error instanceof Error ? error.message : 'Unknown error'];
-      logger.error(`Phase ${phaseName} failed:`, error);
-      throw error;
-    }
+  private updateActivity(agentId: string, status: any, log: string) {
+      this.eventBus.publish('agent:activity:update', {
+          agentId,
+          status,
+          lastLog: log,
+          timestamp: Date.now()
+      });
   }
 }
+
 
 export default OrchestratorAgent;

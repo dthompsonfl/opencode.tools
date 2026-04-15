@@ -7,27 +7,77 @@
  * Provides access to all agents and capabilities
  */
 
-import { program } from 'commander';
+import './runtime/register-path-aliases';
+
+import { Command } from 'commander';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 import { ResearchAgent } from '../agents/research/research-agent';
 import { DocumentationAgent } from '../agents/docs';
 import { ArchitectureAgent } from '../agents/architecture';
 import { PDFGeneratorAgent } from '../agents/pdf/pdf-agent';
+import type { PDFInput } from '../agents/pdf/types';
+import type { ResearchDossier } from '../agents/research/types';
 import { logger } from './runtime/logger';
 import { CoworkOrchestrator } from './cowork/orchestrator/cowork-orchestrator';
 import { CommandRegistry } from './cowork/registries/command-registry';
 import { AgentRegistry } from './cowork/registries/agent-registry';
-import { loadAllPlugins } from './cowork/plugin-loader';
+import { loadAllPlugins, loadNativeAgents } from './cowork/plugin-loader';
+import { FoundryOrchestrator, createFoundryExecutionRequest } from './foundry/orchestrator';
+import { createWarmedUpBridge } from './foundry/cowork-bridge';
+import type { FoundryExecutionRequest } from './foundry/contracts';
 
-const VERSION = '1.0.0';
+const VERSION = process.env.npm_package_version || '1.0.0';
+
+interface CliDependencies {
+  createDocumentationAgent: () => DocumentationAgent;
+  createArchitectureAgent: () => ArchitectureAgent;
+  createPdfAgent: () => PDFGeneratorAgent;
+}
+
+const defaultDependencies: CliDependencies = {
+  createDocumentationAgent: () => new DocumentationAgent(),
+  createArchitectureAgent: () => new ArchitectureAgent(),
+  createPdfAgent: () => new PDFGeneratorAgent(),
+};
+
+interface DocsCommandInput {
+  dossier?: unknown;
+  brief?: unknown;
+  clientBrief?: unknown;
+}
+
+type OrchestrationMode = 'research' | 'docs' | 'architect' | 'code' | 'full';
+
+// Initialize plugin loader and registries
+function initializeCowork(): void {
+  const plugins = loadAllPlugins();
+  const nativeAgents = loadNativeAgents();
+
+  const commandRegistry = CommandRegistry.getInstance();
+  const agentRegistry = AgentRegistry.getInstance();
+
+  for (const plugin of plugins) {
+    commandRegistry.registerMany(plugin.commands);
+    agentRegistry.registerMany(plugin.agents);
+  }
+
+  // Register native agents from ~/.config/opencode/opencode.json
+  agentRegistry.registerMany(nativeAgents);
+}
+
+export function createCliProgram(dependencies: CliDependencies = defaultDependencies): Command {
+const program = new Command();
 
 program
   .name('opencode-tools')
-  .description('OpenCode Tools - Complete Developer Team Automation')
+  .description('OpenCode Tools - Complete Developer Team Automation (Independent TUI & CLI)')
   .version(VERSION);
 
 program
   .command('research')
+
   .description('Execute research agent to gather comprehensive dossier')
   .argument('<company>', 'Company name to research')
   .option('-i, --industry <industry>', 'Industry sector')
@@ -59,9 +109,26 @@ program
   .action(async (input, options) => {
     try {
       logger.info('Generating documentation');
-      const agent = new DocumentationAgent();
-      // Implementation details...
-      console.log('Documentation generated');
+      const inputPath = resolveReadableFile(input);
+      const outputDir = resolveOutputDirectory(options.output);
+      const payload = parseJsonFile<DocsCommandInput>(inputPath);
+      const dossier = extractDossier(payload);
+      const brief = extractBrief(payload);
+
+      const agent = dependencies.createDocumentationAgent();
+      const documents = await agent.generateDocuments(dossier, brief);
+
+      ensureDirectory(outputDir);
+      const prdPath = path.join(outputDir, 'PRD.md');
+      const sowPath = path.join(outputDir, 'SOW.md');
+      const metadataPath = path.join(outputDir, 'docs.metadata.json');
+      fs.writeFileSync(prdPath, documents.prd, 'utf-8');
+      fs.writeFileSync(sowPath, documents.sow, 'utf-8');
+      if (documents.metadata) {
+        fs.writeFileSync(metadataPath, JSON.stringify(documents.metadata, null, 2), 'utf-8');
+      }
+
+      console.log(`Documentation generated: PRD=${prdPath} SOW=${sowPath}`);
     } catch (error) {
       logger.error('Documentation generation failed:', error);
       process.exit(1);
@@ -76,9 +143,24 @@ program
   .action(async (prd, options) => {
     try {
       logger.info('Generating architecture');
-      const agent = new ArchitectureAgent();
-      // Implementation details...
-      console.log('Architecture generated');
+      const prdPath = resolveReadableFile(prd);
+      const outputDir = resolveOutputDirectory(options.output);
+      const prdContent = fs.readFileSync(prdPath, 'utf-8');
+
+      const agent = dependencies.createArchitectureAgent();
+      const architecture = await agent.execute({ prd_content: prdContent });
+
+      ensureDirectory(outputDir);
+      const diagramPath = path.join(outputDir, 'architecture.mmd');
+      const backlogPath = path.join(outputDir, 'backlog.json');
+      const metadataPath = path.join(outputDir, 'architecture.metadata.json');
+      fs.writeFileSync(diagramPath, architecture.architectureDiagram, 'utf-8');
+      fs.writeFileSync(backlogPath, JSON.stringify(architecture.backlog, null, 2), 'utf-8');
+      if (architecture.metadata) {
+        fs.writeFileSync(metadataPath, JSON.stringify(architecture.metadata, null, 2), 'utf-8');
+      }
+
+      console.log(`Architecture generated: diagram=${diagramPath} backlog=${backlogPath}`);
     } catch (error) {
       logger.error('Architecture generation failed:', error);
       process.exit(1);
@@ -93,9 +175,25 @@ program
   .action(async (config, options) => {
     try {
       logger.info('Generating PDF');
-      const agent = new PDFGeneratorAgent();
-      // Implementation details...
-      console.log('PDF generated');
+      const configPath = resolveReadableFile(config);
+      const input = parseJsonFile<PDFInput>(configPath);
+      const agent = dependencies.createPdfAgent();
+      const result = await agent.execute(input);
+
+      const buffer = assertPdfBuffer(result.documentBuffer);
+
+      const outputPath = resolvePdfOutputPath(options.output, result.documentPath);
+      ensureDirectory(path.dirname(outputPath));
+      fs.writeFileSync(outputPath, buffer);
+
+      const metadataPath = outputPath.replace(/\.pdf$/i, '.metadata.json');
+      fs.writeFileSync(
+        metadataPath,
+        JSON.stringify({ metadata: result.metadata, warnings: result.warnings, meta: result.meta }, null, 2),
+        'utf-8',
+      );
+
+      console.log(`PDF generated: file=${outputPath} pages=${result.metadata.pageCount}`);
     } catch (error) {
       logger.error('PDF generation failed:', error);
       process.exit(1);
@@ -108,7 +206,8 @@ program
   .action(async () => {
     // Import and launch TUI
     // Use dynamic import for ESM compatibility and to allow mocks in tests
-    await import('./tui-app');
+    const { startTui } = await import("./tui-app");
+    await startTui();
   });
 
 program
@@ -116,6 +215,7 @@ program
   .description('Start the main orchestration agent for self-iterative development')
   .option('-p, --project <project>', 'Project name')
   .option('-m, --mode <mode>', 'Operation mode: research|docs|architect|code|full', 'full')
+  .option('--json', 'Output machine-readable JSON report (no ASCII banner)', false)
   .action(async (options) => {
     try {
       logger.info('Starting orchestration agent');
@@ -133,24 +233,35 @@ program
 ╚══════════════════════════════════════════════════════════════╝
       `);
       
-      // Launch orchestration
-      // OrchestratorAgent is a TS module in src/agents
-      const { OrchestratorAgent } = await import('./agents/orchestrator');
-      const orchestrator = new OrchestratorAgent();
-      await orchestrator.execute({
-        project: options.project,
-        mode: options.mode
-      });
+      const intent = options.project || 'Enterprise implementation workflow';
+      const mode = normalizeOrchestrationMode(options.mode);
+      const foundry = new FoundryOrchestrator();
+      const baseRequest = createFoundryExecutionRequest(intent, process.cwd(), true);
+      const request = applyOrchestrationMode(baseRequest, mode);
+      const report = await foundry.execute(request);
+
+      if (options.json) {
+        // Output machine-readable report and exit
+        console.log(JSON.stringify(report, null, 2));
+      } else {
+        console.log('\n🧭 Foundry Report:');
+        console.log(`  Status: ${report.status}`);
+        console.log(`  Final phase: ${report.phase}`);
+        console.log(`  Mode: ${mode}`);
+        console.log(`  Tasks: ${report.tasks.filter(t => t.status === 'completed').length}/${report.tasks.length} completed`);
+        console.log(`  Quality gates: ${report.gateResults.filter(g => g.passed).length}/${report.gateResults.length} passed`);
+        if (report.deliverableScopeReport) {
+          console.log(
+            `  Deliverable scope: ${report.deliverableScopeReport.passed ? 'pass' : 'fail'} (${report.deliverableScopeReport.included.length} included, ${report.deliverableScopeReport.excluded.length} excluded)`,
+          );
+        }
+        console.log(`  Review: ${report.review.passed ? 'approved' : 'changes requested'} by ${report.review.reviewer}`);
+      }
     } catch (error) {
       logger.error('Orchestration failed:', error);
       process.exit(1);
     }
   });
-
-// Default command - show help
-if (process.argv.length === 2) {
-  program.help();
-}
 
 // ============================================================
 // MCP Server Command
@@ -159,11 +270,9 @@ if (process.argv.length === 2) {
 program
   .command('mcp')
   .description('Start the MCP server for OpenCode integration')
-  .option('-p, --port <port>', 'Port for remote MCP server (optional, for type: remote)', '3000')
-  .option('-h, --host <host>', 'Host for remote MCP server', 'localhost')
-  .action(async (options) => {
+  .action(async () => {
     try {
-      logger.info('Starting MCP server...');
+      process.env.OPENCODE_MCP = '1';
       
       // Import and run the MCP server
       // The MCP server uses stdio transport for local execution
@@ -177,22 +286,21 @@ program
     }
   });
 
+program
+  .command('verify')
+  .description('Verify Foundry/Cowork runtime wiring and health')
+  .action(async () => {
+    try {
+      await runRuntimeVerification();
+    } catch (error) {
+      logger.error('Verification failed:', error);
+      process.exit(1);
+    }
+  });
+
 // ============================================================
 // Cowork Plugin System Commands
 // ============================================================
-
-// Initialize plugin loader and registries
-function initializeCowork(): void {
-  const plugins = loadAllPlugins();
-  
-  const commandRegistry = CommandRegistry.getInstance();
-  const agentRegistry = AgentRegistry.getInstance();
-  
-  for (const plugin of plugins) {
-    commandRegistry.registerMany(plugin.commands);
-    agentRegistry.registerMany(plugin.agents);
-  }
-}
 
 // cowork list - List commands, agents, and plugins
 const coworkCmd = program
@@ -350,198 +458,318 @@ program
   .option('-f, --force', 'Force re-integration')
   .action(async (options) => {
     try {
-      console.log('[INFO] Running manual OpenCode integration...');
+      console.log('[INFO] Running OpenCode integration...');
       
       // Get the project root directory
       const projectRoot = path.resolve(__dirname, '..', '..');
       
-      // Import and run the native integrate script
-        try {
-          const nativeIntegratePath = path.join(projectRoot, 'scripts', 'native-integrate.js');
-          // Use require here because the script is a JS file intended to run in Node directly
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const { integrateWithOpenCode } = require(nativeIntegratePath);
-          integrateWithOpenCode(projectRoot);
-          console.log('[SUCCESS] Integration complete!');
-        } catch (loadErr) {
-          console.log('[INFO] Native integration script not found.');
-          console.log('[INFO] Integration is a placeholder - manual integration required.');
-          console.log('[SUCCESS] Integration complete!');
+      // Run the native integrate script directly
+      const nativeIntegratePath = path.join(projectRoot, 'scripts', 'native-integrate.js');
+      
+      if (fs.existsSync(nativeIntegratePath)) {
+        // Use require here because the script is a JS file intended to run in Node directly
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { integrateWithOpenCode } = require(nativeIntegratePath);
+        integrateWithOpenCode(projectRoot);
+        console.log('[SUCCESS] Integration complete!');
+      } else {
+        // If the compiled script doesn't exist, run the integration logic inline
+        console.log('[INFO] Running inline integration...');
+        
+        const opencodeDir = path.join(os.homedir(), '.config', 'opencode');
+        if (!fs.existsSync(opencodeDir)) {
+          fs.mkdirSync(opencodeDir, { recursive: true });
         }
+        
+        const configPath = path.join(opencodeDir, 'opencode.json');
+        let config: Record<string, unknown> = {};
+        
+        if (fs.existsSync(configPath)) {
+          try {
+            config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+          } catch {
+            // Ignore parse errors
+          }
+        }
+        
+        if (!config.mcp || typeof config.mcp !== 'object') {
+          config.mcp = {};
+        }
+        
+        (config.mcp as Record<string, unknown>)['opencode-tools'] = {
+          type: 'local',
+          command: ['opencode-tools', 'mcp'],
+          description: 'Complete developer team automation',
+          enabled: true,
+          timeout: 60000,
+        };
+        
+        if (!config.agent) {
+          config.agent = 'foundry';
+        }
+        
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+        console.log(`[SUCCESS] Integration complete! Config written to ${configPath}`);
+      }
     } catch (error) {
       logger.error('Integration failed:', error);
       process.exit(1);
     }
   });
 
-// ============================================================
-// CTO Orchestrator Commands - Executive Development Team
-// ============================================================
+return program;
+}
 
-program
-  .command('cto')
-  .description('Launch CTO orchestrator for complete project development')
-  .argument('<prompt>', 'Project description or requirements')
-  .option('-o, --output <dir>', 'Output directory', './output')
-  .option('-q, --quality <threshold>', 'Quality threshold (0-100)', '95')
-  .option('--no-autoheal', 'Disable auto-healing')
-  .action(async (prompt, options) => {
-    try {
-      console.log(`
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║           OpenCode Tools - CTO Orchestrator Mode              ║
-║                                                               ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Acting as: Chief Technical Officer + Complete Dev Team      ║
-║  - Executive oversight and strategic planning                 ║
-║  - Multi-agent collaboration with real-time communication    ║
-║  - Self-healing code review and optimization                 ║
-║  - Production-ready code at Apple-level standards            ║
-╚═══════════════════════════════════════════════════════════════╝
-      `);
+function ensureDirectory(dirPath: string): void {
+  fs.mkdirSync(dirPath, { recursive: true });
+}
 
-      const { CTOOrchestrator } = await import('./cowork/orchestrator/cto-orchestrator');
-      
-      const orchestrator = new CTOOrchestrator({
-        projectDir: process.cwd(),
-        qualityThreshold: parseInt(options.quality),
-        enableAutoHeal: options.autoheal,
-        defaultTimeout: 120000
-      });
+function resolveReadableFile(filePath: string): string {
+  const resolved = path.resolve(filePath);
+  const stat = fs.statSync(resolved, { throwIfNoEntry: false });
+  if (!stat || !stat.isFile()) {
+    throw new Error(`Input file does not exist or is not a file: ${resolved}`);
+  }
 
-      // Listen for orchestrator events
-      orchestrator.on('phase:start', (event) => {
-        console.log(`\n📋 Phase Started: ${event.phase}`);
-      });
+  return resolved;
+}
 
-      orchestrator.on('phase:complete', (event) => {
-        console.log(`✅ Phase Complete: ${event.phase}`);
-      });
+function resolveOutputDirectory(outputPath: string): string {
+  return path.resolve(outputPath);
+}
 
-      orchestrator.on('collaboration:message', (msg) => {
-        console.log(`💬 ${msg.from}: ${msg.subject}`);
-      });
+function resolvePdfOutputPath(requestedOutput: string, fallbackOutput: string): string {
+  const requested = path.resolve(requestedOutput);
+  if (requested.toLowerCase().endsWith('.pdf')) {
+    return requested;
+  }
 
-      orchestrator.on('session:complete', (event) => {
-        console.log('\n✨ Session Complete!');
-      });
+  const fallbackName = path.basename(fallbackOutput) || 'document.pdf';
+  return path.join(requested, fallbackName);
+}
 
-      console.log('\n🚀 Starting development workflow...\n');
-      const result = await orchestrator.executeWorkflow(prompt);
+function assertPdfBuffer(buffer: Buffer): Buffer {
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+    throw new Error('PDF generation returned an empty document buffer.');
+  }
 
-      // Check if clarification is needed
-      if ((result.output as any)?.status === 'clarification_needed') {
-        console.log('\n🤔 I need to understand your requirements better:\n');
-        const questions = (result.output as any).questions as string[];
-        questions.forEach((q, i) => {
-          console.log(`  ${i + 1}. ${q}`);
-        });
-        console.log('\nPlease provide more details and run again.');
-        return;
-      }
+  const header = buffer.subarray(0, 5).toString('utf-8');
+  if (header !== '%PDF-') {
+    throw new Error('Generated document is not a valid PDF payload.');
+  }
 
-      // Display results
-      console.log('\n📊 Development Complete!\n');
-      const metadata = result.metadata as any;
-      console.log('Quality Score:', metadata.qualityScore || 'N/A', '/ 100');
-      console.log('Production Ready:', metadata.productionReady ? '✅ Yes' : '❌ No');
-      
-      if (options.output) {
-        const fs = await import('fs');
-        const path = await import('path');
-        const outputPath = path.join(options.output, 'cto-result.json');
-        
-        if (!fs.existsSync(options.output)) {
-          fs.mkdirSync(options.output, { recursive: true });
-        }
-        
-        fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
-        console.log(`\n💾 Results saved to: ${outputPath}`);
-      }
+  return buffer;
+}
 
-      console.log('\n✨ CTO Orchestrator session complete!');
-    } catch (error) {
-      logger.error('CTO orchestrator failed:', error);
-      process.exit(1);
-    }
+function normalizeOrchestrationMode(mode: string): OrchestrationMode {
+  const normalized = mode.trim().toLowerCase();
+  if (
+    normalized === 'research' ||
+    normalized === 'docs' ||
+    normalized === 'architect' ||
+    normalized === 'code' ||
+    normalized === 'full'
+  ) {
+    return normalized;
+  }
+
+  throw new Error(`Unsupported mode: ${mode}`);
+}
+
+export function applyOrchestrationMode(
+  request: FoundryExecutionRequest,
+  mode: OrchestrationMode,
+): FoundryExecutionRequest {
+  const next: FoundryExecutionRequest = {
+    ...request,
+    enforceDeliverableScope: request.enforceDeliverableScope !== false,
+  };
+
+  switch (mode) {
+    case 'research':
+      next.maxIterations = 1;
+      next.runQualityGates = false;
+      break;
+    case 'docs':
+      next.maxIterations = 1;
+      next.runQualityGates = false;
+      break;
+    case 'architect':
+      next.maxIterations = 1;
+      next.runQualityGates = true;
+      break;
+    case 'code':
+      next.maxIterations = 2;
+      next.runQualityGates = true;
+      break;
+    case 'full':
+      next.maxIterations = 3;
+      next.runQualityGates = true;
+      break;
+    default:
+      throw new Error(`Unsupported mode: ${mode}`);
+  }
+
+  const baseDescription = request.description?.trim() || request.projectName;
+  next.description = `[mode:${mode}] ${baseDescription}`;
+
+  return next;
+}
+
+function parseJsonFile<T>(filePath: string): T {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(content) as T;
+}
+
+function extractDossier(payload: DocsCommandInput): ResearchDossier {
+  const maybeDossier = (payload && typeof payload === 'object' && 'dossier' in payload)
+    ? payload.dossier
+    : payload;
+
+  if (!maybeDossier || typeof maybeDossier !== 'object') {
+    throw new Error('Documentation input must include a dossier object.');
+  }
+
+  return maybeDossier as ResearchDossier;
+}
+
+function extractBrief(payload: DocsCommandInput): string {
+  if (typeof payload?.brief === 'string' && payload.brief.trim().length > 0) {
+    return payload.brief;
+  }
+
+  if (payload?.clientBrief) {
+    return JSON.stringify(payload.clientBrief, null, 2);
+  }
+
+  return 'Client brief not supplied in input payload.';
+}
+
+interface VerificationCheck {
+  name: string;
+  passed: boolean;
+  detail: string;
+}
+
+async function runRuntimeVerification(): Promise<void> {
+  const checks: VerificationCheck[] = [];
+
+  const foundryAliasPath = resolveModulePath('@foundry/core/state-machine');
+  const srcFoundryAliasPath = resolveModulePath('@src/foundry/orchestrator');
+  const srcCoworkAliasPath = resolveModulePath('@src/cowork/orchestrator/cowork-orchestrator');
+  const srcAliasPath = resolveModulePath('@/cowork/orchestrator/cowork-orchestrator');
+  const srcPrefixAliasPath = resolveModulePath('src/runtime/logger');
+  const runtimeAliasesHealthy = Boolean(
+    foundryAliasPath
+    && srcFoundryAliasPath
+    && srcCoworkAliasPath
+    && srcAliasPath
+    && srcPrefixAliasPath
+  );
+
+  checks.push({
+    name: 'Runtime alias bootstrap',
+    passed: runtimeAliasesHealthy,
+    detail: runtimeAliasesHealthy
+      ? 'resolved @foundry/, @src/, @/, and src/ imports'
+      : 'failed to resolve one or more configured aliases',
   });
 
-// Auto-feature command
-program
-  .command('auto-feature')
-  .description('Automatically implement a feature based on specification')
-  .argument('<name>', 'Feature name')
-  .option('-t, --type <type>', 'Feature type (crud|page|component)', 'crud')
-  .option('-f, --fields <fields>', 'Data fields (comma-separated: name:type:required)', 'name:string:true')
-  .option('-o, --output <dir>', 'Output directory', './src/features')
-  .option('--no-tests', 'Skip test generation')
-  .option('--no-ui', 'Skip UI generation')
-  .action(async (name, options) => {
-    try {
-      console.log(`\n🔧 Auto-Feature: ${name}\n`);
+  const originalProvider = process.env.COWORK_LLM_PROVIDER;
+  const originalAllowMock = process.env.COWORK_ALLOW_MOCK_LLM;
+  const shouldUseMockForVerification = !originalProvider && !process.env.OPENAI_API_KEY;
+  let bridgeErrors: string[] = [];
 
-      const { AutoFeaturePipeline } = await import('./cowork/features/auto-feature-pipeline');
-      
-      const pipeline = new AutoFeaturePipeline({
-        projectDir: process.cwd(),
-        targetDir: options.output,
-        enableTests: options.tests,
-        enableDocs: true
+  if (shouldUseMockForVerification) {
+    process.env.COWORK_LLM_PROVIDER = 'mock';
+    process.env.COWORK_ALLOW_MOCK_LLM = 'true';
+  }
+
+  try {
+    const bridge = createWarmedUpBridge();
+    const bridgeHealth = bridge.healthCheck();
+    bridgeErrors = [...bridgeHealth.errors];
+    checks.push({
+      name: 'FoundryCoworkBridge health',
+      passed: bridgeHealth.healthy,
+      detail: `agents=${bridgeHealth.agentCount}, commands=${bridgeHealth.commandCount}, missingRoles=${bridgeHealth.missingRoles.length}`,
+    });
+
+    const collaboration = await import('./foundry/integration/collaboration-bridge');
+    const collaborationBridgeExported = typeof collaboration.FoundryCollaborationBridge === 'function';
+    checks.push({
+      name: 'FoundryCollaborationBridge wiring',
+      passed: collaborationBridgeExported,
+      detail: collaborationBridgeExported ? 'module loaded' : 'module export missing',
+    });
+
+    const foundryModule = await import('./foundry/orchestrator');
+    checks.push({
+      name: 'FoundryOrchestrator wiring',
+      passed: typeof foundryModule.FoundryOrchestrator === 'function',
+      detail: 'module loaded',
+    });
+
+    if (shouldUseMockForVerification) {
+      checks.push({
+        name: 'LLM provider mode',
+        passed: true,
+        detail: 'used temporary mock provider for verification',
       });
-
-      // Parse fields
-      const fields = options.fields.split(',').map((f: string) => {
-        const [name, type, required] = f.split(':');
-        return {
-          name,
-          type: type as any,
-          required: required === 'true'
-        };
-      });
-
-      const result = await pipeline.autoImplementCRUD(
-        name,
-        fields,
-        {
-          includeUI: options.ui,
-          includeValidation: true,
-          includeSearch: true
-        }
-      );
-
-      if (result.success) {
-        console.log('✅ Feature implemented successfully!\n');
-        console.log('Files generated:');
-        result.files.forEach(f => console.log(`  📄 ${f.path}`));
-        
-        if (result.tests.length > 0) {
-          console.log('\nTests generated:');
-          result.tests.forEach(t => console.log(`  🧪 ${t.path}`));
-        }
-        
-        console.log(`\n📊 Quality Score: ${result.quality.score}/100`);
-        console.log(`⏱️  Estimated Effort: ${result.estimatedEffort}`);
-        
-        // Save documentation
-        const fs = await import('fs');
-        const path = await import('path');
-        const docPath = path.join(options.output, name.toLowerCase(), 'README.md');
-        
-        if (!fs.existsSync(path.dirname(docPath))) {
-          fs.mkdirSync(path.dirname(docPath), { recursive: true });
-        }
-        
-        fs.writeFileSync(docPath, result.documentation);
-        console.log(`\n📝 Documentation: ${docPath}`);
-      } else {
-        console.log('❌ Feature implementation failed');
-        console.log(result.documentation);
-      }
-    } catch (error) {
-      logger.error('Auto-feature failed:', error);
-      process.exit(1);
     }
-  });
+  } finally {
+    if (originalProvider === undefined) {
+      delete process.env.COWORK_LLM_PROVIDER;
+    } else {
+      process.env.COWORK_LLM_PROVIDER = originalProvider;
+    }
 
-program.parse();
+    if (originalAllowMock === undefined) {
+      delete process.env.COWORK_ALLOW_MOCK_LLM;
+    } else {
+      process.env.COWORK_ALLOW_MOCK_LLM = originalAllowMock;
+    }
+  }
+
+  const failedChecks = checks.filter((check) => !check.passed);
+
+  console.log('\n🔍 OpenCode Runtime Verification');
+  console.log('================================');
+  for (const check of checks) {
+    console.log(`  ${check.passed ? '✅' : '❌'} ${check.name}: ${check.detail}`);
+  }
+
+  if (bridgeErrors.length > 0) {
+    console.log('\n⚠️ Bridge diagnostics:');
+    for (const error of bridgeErrors) {
+      console.log(`  - ${error}`);
+    }
+  }
+
+  if (failedChecks.length > 0) {
+    throw new Error(`Verification failed (${failedChecks.length} check(s) did not pass).`);
+  }
+
+  console.log('\n✅ Verification completed successfully.');
+}
+
+function resolveModulePath(specifier: string): string | null {
+  try {
+    return require.resolve(specifier);
+  } catch {
+    return null;
+  }
+}
+
+if (require.main === module) {
+  const cli = createCliProgram();
+  const argv = process.argv.length === 2
+    ? [...process.argv, 'tui']
+    : [...process.argv];
+
+  if (argv.length === 3 && argv[2] === '--verify') {
+    argv[2] = 'verify';
+  }
+
+  cli.parse(argv);
+}

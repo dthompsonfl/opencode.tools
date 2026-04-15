@@ -8,12 +8,9 @@
  * - Security architecture
  * - Project backlog
  */
-import * as fs from 'fs';
-import * as path from 'path';
 import { logToolCall } from './audit';
 import { ProjectStack } from './discovery';
-
-const RUN_ID = 'mock-run-123';
+import { resolveRunContext } from '../src/runtime/run-context';
 
 export interface ArchComponent {
     name: string;
@@ -301,6 +298,7 @@ export async function generateArchitecture(prd: any, constraints: any[] = []): P
     mermaid: string;
     summary: string;
 }> {
+    const context = resolveRunContext();
     console.log('[Arch.generate] Generating system architecture.');
     
     // Extract input from PRD or use defaults
@@ -343,7 +341,7 @@ ${components.map(c => `- **${c.name}**: ${c.description}`).join('\n')}
 ${securityModel.compliance.map(c => `- ${c}`).join('\n') || 'None specified'}
 `;
     
-    await logToolCall(RUN_ID, 'arch.generate', { 
+    await logToolCall(context.runId, 'arch.generate', { 
         projectName: input.projectName 
     }, { 
         component_count: components.length,
@@ -367,117 +365,90 @@ export async function generateBacklog(architecture: any): Promise<{
     epics: any[];
     summary: string;
 }> {
+    const context = resolveRunContext();
     console.log('[Arch.generateBacklog] Creating project backlog.');
-    
+    const componentNames = (architecture?.components || []).map((component: any) => component.name);
+    const entityNames = (architecture?.dataModel?.entities || []).map((entity: any) => entity.name);
+
     const epics = [
+      {
+        id: 'epic-platform',
+        title: 'Platform Foundation',
+        description: `Provision runtime for ${componentNames.length || 1} core components`,
+        priority: 'high',
+        stories: [
+          {
+            id: 'story-platform-ci',
+            title: 'Establish CI and deployment controls',
+            tasks: [
+              'Configure CI checks for lint, test, and type safety',
+              'Publish deployable artifact',
+              'Add staged deployment gates'
+            ],
+            acceptanceCriteria: [
+              'CI is required on pull requests',
+              'Deployment pipeline records release metadata'
+            ],
+            sizing: 'M',
+            priority: 'high'
+          }
+        ]
+      },
+      {
+        id: 'epic-services',
+        title: 'Service Implementation',
+        description: `Implement and harden ${componentNames.length || 1} service components`,
+        priority: 'high',
+        stories: componentNames.slice(0, 4).map((name: string, index: number) => ({
+          id: `story-svc-${index + 1}`,
+          title: `Implement ${name}`,
+          tasks: [
+            `Define ${name} API contracts`,
+            `Implement ${name} core responsibilities`,
+            `Add observability and error handling for ${name}`
+          ],
+          acceptanceCriteria: [
+            `${name} exposes documented interfaces`,
+            `${name} includes automated test coverage`
+          ],
+          sizing: 'M',
+          priority: 'high'
+        }))
+      },
+      {
+        id: 'epic-data',
+        title: 'Data and Integrity',
+        description: `Deliver schema and persistence for ${entityNames.length || 1} entities`,
+        priority: 'medium',
+        stories: entityNames.slice(0, 4).map((name: string, index: number) => ({
+          id: `story-data-${index + 1}`,
+          title: `Implement ${name} persistence`,
+          tasks: [
+            `Define ${name} schema and constraints`,
+            `Create CRUD operations for ${name}`,
+            `Add migration and rollback safety checks`
+          ],
+          acceptanceCriteria: [
+            `${name} schema migrations are repeatable`,
+            `${name} read/write paths are tested`
+          ],
+          sizing: 'M',
+          priority: 'medium'
+        }))
+      }
+    ].map((epic) => ({
+      ...epic,
+      stories: epic.stories.length > 0 ? epic.stories : [
         {
-            id: 'epic-infra',
-            title: 'Infrastructure Setup',
-            description: 'Set up cloud infrastructure and CI/CD',
-            priority: 'high',
-            stories: [
-                {
-                    id: 'story-infra-1',
-                    title: 'Set up cloud environment',
-                    tasks: [
-                        'Create AWS/GCP project',
-                        'Configure VPC networking',
-                        'Set up Kubernetes cluster',
-                        'Configure monitoring'
-                    ],
-                    acceptanceCriteria: [
-                        'Cluster is accessible',
-                        'Monitoring is operational'
-                    ],
-                    sizing: 'L',
-                    priority: 'high'
-                },
-                {
-                    id: 'story-infra-2',
-                    title: 'Configure CI/CD pipeline',
-                    tasks: [
-                        'Set up GitHub Actions',
-                        'Configure build stages',
-                        'Add automated testing',
-                        'Configure deployment'
-                    ],
-                    acceptanceCriteria: [
-                        'Pipeline runs on PR',
-                        'Deploys to staging automatically'
-                    ],
-                    sizing: 'M',
-                    priority: 'high'
-                }
-            ]
-        },
-        {
-            id: 'epic-auth',
-            title: 'Authentication System',
-            description: 'Implement user authentication and authorization',
-            priority: 'high',
-            stories: [
-                {
-                    id: 'story-auth-1',
-                    title: 'Implement user registration',
-                    tasks: [
-                        'Create registration endpoint',
-                        'Add email verification',
-                        'Implement password hashing',
-                        'Add input validation'
-                    ],
-                    acceptanceCriteria: [
-                        'Users can register',
-                        'Email verification works',
-                        'Passwords are securely hashed'
-                    ],
-                    sizing: 'M',
-                    priority: 'high'
-                },
-                {
-                    id: 'story-auth-2',
-                    title: 'Implement login flow',
-                    tasks: [
-                        'Create login endpoint',
-                        'Implement JWT token generation',
-                        'Add session management',
-                        'Configure token refresh'
-                    ],
-                    acceptanceCriteria: [
-                        'Users can login',
-                        'Tokens are valid',
-                        'Sessions persist'
-                    ],
-                    sizing: 'M',
-                    priority: 'high'
-                }
-            ]
-        },
-        {
-            id: 'epic-core',
-            title: 'Core Features',
-            description: 'Implement main application features',
-            priority: 'medium',
-            stories: [
-                {
-                    id: 'story-core-1',
-                    title: 'API endpoints implementation',
-                    tasks: [
-                        'Design RESTful endpoints',
-                        'Implement CRUD operations',
-                        'Add request validation',
-                        'Configure error handling'
-                    ],
-                    acceptanceCriteria: [
-                        'All endpoints return correct status',
-                        'Data validation works',
-                        'Errors are properly handled'
-                    ],
-                    sizing: 'L',
-                    priority: 'medium'
-                }
-            ]
+          id: `${epic.id}-seed`,
+          title: `Baseline ${epic.title} implementation`,
+          tasks: ['Establish baseline implementation', 'Define acceptance tests'],
+          acceptanceCriteria: ['Story is ready for execution'],
+          sizing: 'S',
+          priority: epic.priority
         }
-    ];
+      ]
+    }));
     
     const summary = `# Backlog Summary
 
@@ -492,7 +463,7 @@ ${epics.reduce((sum, e) => sum + e.stories.length, 0)} stories across ${epics.le
 - Medium: ${epics.filter(e => e.priority === 'medium').reduce((sum, e) => sum + e.stories.length, 0)} stories
 `;
     
-    await logToolCall(RUN_ID, 'backlog.generate', { 
+    await logToolCall(context.runId, 'backlog.generate', { 
         epic_count: epics.length 
     }, { 
         story_count: epics.reduce((sum, e) => sum + e.stories.length, 0) 

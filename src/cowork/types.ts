@@ -1,168 +1,133 @@
 /**
- * Cowork Plugin System - Core Type Definitions
+ * Cowork Plugin System - Type Definitions
  * 
- * Defines all types for the plugin system including commands, agents,
- * skills, hooks, and permission structures.
+ * Core type definitions for the plugin system that enables extensible
+ * command and agent registration.
  */
 
-/**
- * Plugin manifest containing metadata about a plugin
- */
-export interface PluginManifest {
-  /** Unique identifier for the plugin */
+export interface CoworkPluginManifest {
   id: string;
-  /** Human-readable name */
   name: string;
-  /** Semantic version */
   version: string;
-  /** Optional description */
   description?: string;
-  /** Plugin author */
   author?: string;
-  /** License type */
-  license?: string;
-  /** Entry point configuration */
-  entryPoint?: {
-    type: 'command' | 'agent' | 'hook';
-    path: string;
-  };
-  /** Plugin capabilities */
+  entryPoint?: string;
   capabilities?: string[];
 }
 
-/**
- * Command definition from markdown frontmatter
- */
-export interface CommandDefinition {
-  /** Unique identifier */
+export interface CoworkCommand {
   id: string;
-  /** Command name (used in CLI) */
   name: string;
-  /** Human-readable description */
   description: string;
-  /** Command body/prompt content */
-  body: string;
-  /** Allowed tools for this command */
-  allowedTools?: string[];
-  /** Model to use for this command */
-  model?: string;
-  /** Hint for command arguments */
+  handler: (args: string[]) => Promise<CoworkCommandResult>;
   argumentHint?: string;
+  body?: string;
+  allowedTools?: string[];
 }
 
-/**
- * Agent definition from markdown frontmatter
- */
-export interface AgentDefinition {
-  /** Unique identifier */
-  id: string;
-  /** Agent name */
-  name: string;
-  /** Human-readable description */
-  description: string;
-  /** Agent body/prompt content */
-  body: string;
-  /** Tools available to this agent */
-  tools?: string[];
-  /** Model to use for this agent */
-  model?: string;
-  /** Display color for the agent */
-  color?: string;
-}
-
-/**
- * Skill definition from markdown
- */
-export interface SkillDefinition {
-  /** Unique identifier */
-  id: string;
-  /** Skill name */
-  name: string;
-  /** Skill body/content */
-  body: string;
-}
-
-/**
- * Hook event types that can trigger hooks
- */
-export type HookEvent = 
-  | 'SessionStart'
-  | 'UserPromptSubmit'
-  | 'PreToolUse'
-  | 'PostToolUse'
-  | 'Stop'
-  | 'SessionEnd';
-
-/**
- * Hook definition for event-driven scripting
- */
-export interface HookDefinition {
-  /** Hook name */
-  name: string;
-  /** Events this hook responds to */
-  events: HookEvent[];
-  /** Hook type */
-  type: 'command';
-  /** Command to execute */
-  command: string;
-  /** Timeout in milliseconds */
-  timeoutMs?: number;
-}
-
-/**
- * Context passed to hooks when triggered
- */
-export interface HookContext {
-  /** Event name that triggered the hook */
-  eventName: HookEvent;
-  /** Tool name if applicable */
-  toolName?: string;
-  /** Tool input data if applicable */
-  toolInput?: Record<string, unknown>;
-  /** Project directory */
-  projectDir: string;
-  /** Plugin root directory */
-  pluginRoot: string;
-  /** Path to transcript file */
-  transcriptPath?: string;
-  /** Timestamp of the event */
-  timestamp: string;
-}
-
-/**
- * Decision returned by hook execution
- */
-export interface HookDecision {
-  /** Decision outcome */
-  decision: 'allow' | 'deny' | 'block';
-  /** Optional message explaining the decision */
+export interface CoworkCommandResult {
+  success: boolean;
+  data?: unknown;
+  error?: string;
   message?: string;
 }
 
-/**
- * Result of loading a complete plugin
- */
-export interface PluginLoadResult {
-  /** Plugin manifest */
-  manifest: PluginManifest;
-  /** Loaded commands */
-  commands: CommandDefinition[];
-  /** Loaded agents */
-  agents: AgentDefinition[];
-  /** Loaded skills */
-  skills: SkillDefinition[];
-  /** Loaded hooks */
-  hooks: HookDefinition[];
-  /** Root path of the plugin */
-  rootPath: string;
+export interface CoworkAgent {
+  id: string;
+  name: string;
+  description: string;
+  tools?: string[];
+  model?: string;
+  body?: string;
+  execute: (task: string, context?: unknown) => Promise<CoworkAgentResult>;
 }
 
-/**
- * Tool permission configuration
- */
-export interface ToolPermission {
-  /** Tool name */
-  toolName: string;
-  /** Whether tool is allowed */
-  allowed: boolean;
+export interface CoworkAgentResult {
+  success: boolean;
+  data?: unknown;
+  error?: string;
+  message?: string;
+}
+
+export interface CoworkSkill {
+  id: string;
+  name: string;
+  description: string;
+  execute: (input: unknown) => Promise<unknown>;
+}
+
+export interface CoworkHook {
+  event: string;
+  handler: (context: unknown) => Promise<void>;
+}
+
+export interface CoworkPlugin {
+  manifest: CoworkPluginManifest;
+  commands: CoworkCommand[];
+  agents: CoworkAgent[];
+  skills: CoworkSkill[];
+  hooks: CoworkHook[];
+  rootPath?: string;
+}
+
+export interface RegistryEntry<T> {
+  id: string;
+  item: T;
+  registeredAt: Date;
+  source?: string;
+}
+
+export type HookEvent = 'command:start' | 'command:complete' | 'command:error' | 'agent:start' | 'agent:complete' | 'agent:error' | string;
+
+export interface HookDefinition {
+    id?: string;
+    name: string;
+    events: HookEvent[];
+    type?: 'command' | 'script' | string;
+    command: string;
+    timeoutMs?: number;
+}
+
+export interface HookContext {
+    event?: HookEvent;
+    eventName?: HookEvent;
+    [key: string]: unknown;
+}
+
+export interface HookDecision {
+    decision: 'allow' | 'deny' | 'block';
+    message?: string;
+}
+
+export interface CommandDefinition {
+    id: string;
+    name: string;
+    description: string;
+    body?: string;
+    allowedTools?: string[];
+    model?: string;
+    argumentHint?: string;
+    handler?: (args: string[]) => Promise<CoworkCommandResult>;
+}
+
+export interface AgentDefinition {
+    id: string;
+    name: string;
+    description: string;
+    body?: string;
+    tools?: string[];
+    model?: string;
+    color?: string;
+    steps?: any[];
+    interactive?: boolean;
+    repl?: boolean;
+    execute?: (answers: any, log: any) => Promise<any>;
+    onInput?: (input: string, log: any) => Promise<void>;
+}
+
+export interface SkillDefinition {
+    id: string;
+    name: string;
+    body?: string;
+    description?: string;
 }

@@ -19,7 +19,7 @@ export class TUICodeGenAgent {
       const techStack = await this.tuiPrompt('Tech Stack (e.g. Node.js/TypeScript):');
       
       console.log(`\n🚀 Scaffolding ${title}...`);
-      const result = await this.agent.prototype({
+      const result = await this.agent.execute({
           id: 'TUI-RUN',
           title,
           description: `Generated via OpenCode TUI`,

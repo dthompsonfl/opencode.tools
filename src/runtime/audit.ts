@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ToolCallRecord } from '../types/run';
-import { redactor } from '../security/redaction';
+import { redactText } from '../security/redaction';
 
 export class AuditLogger {
   private logPath: string;
@@ -11,7 +11,7 @@ export class AuditLogger {
   }
 
   async log(record: ToolCallRecord): Promise<void> {
-    const redactedRecord = redactor.redactObject(record);
+    const redactedRecord = redactText(JSON.stringify(record));
     const line = JSON.stringify(redactedRecord) + '\n';
     await fs.promises.appendFile(this.logPath, line, 'utf-8');
   }

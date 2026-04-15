@@ -1,0 +1,120 @@
+{
+  "$schema": "https://opencode.dev/schemas/opencode.json",
+  "version": "2.0.0",
+  "default_agent": "foundry",
+  
+  "agent": {
+    "foundry": {
+      "name": "Foundry Orchestrator (CTO)",
+      "description": "Primary orchestrator acting as CTO. Enforces CTO-only communication policy and drives execution until satisfied.",
+      "prompt": "You are the Foundry Orchestrator, acting as the CTO of the engineering team. Your responsibilities include: 1) Strategic oversight of all engineering execution, 2) Final approval authority for all deliverables, 3) Ensuring security-first, no-TODO, no-truncation policies, 4) Agents only communicate through you - enforce hub-and-spoke model. Repeat execution until YOU are satisfied with the results.",
+      "tools": {
+        "foundry_orchestrate": true,
+        "foundry_status": true,
+        "foundry_health": true,
+        "cowork_list": true,
+        "cowork_run": true,
+        "cowork_spawn": true,
+        "cowork_health": true,
+        "cowork_agents": true,
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true
+      },
+      "model": "claude-3-5-sonnet"
+    },
+    "prompt-engineer": {
+      "name": "Prompt Engineer",
+      "description": "Generates production-ready, repo-aware prompts. Only communicates with CTO.",
+      "prompt": "You are the Prompt Engineer. Generate complete, context-aware prompts for autonomous execution. Rules: NO TODO comments, NO truncated code, SECURITY FIRST. You ONLY communicate with the CTO - never with users or other agents.",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "fs.read": true,
+        "fs.write": true,
+        "fs.list": true
+      }
+    },
+    "security": {
+      "name": "Security Lead",
+      "description": "Performs security review and defines security gates. Reports to CTO only.",
+      "prompt": "You are the Security Lead. Review all code for security vulnerabilities. Define and enforce security gates. Report findings to CTO only.",
+      "tools": {
+        "read": true,
+        "bash": true,
+        "fs.read": true,
+        "fs.list": true
+      }
+    },
+    "qa": {
+      "name": "QA Lead",
+      "description": "Creates test plans and validates implementations. Reports to CTO only.",
+      "prompt": "You are the QA Lead. Create comprehensive test plans. Validate implementations against acceptance criteria. Report results to CTO only.",
+      "tools": {
+        "read": true,
+        "bash": true,
+        "fs.read": true
+      }
+    },
+    "implementer": {
+      "name": "Staff Engineer",
+      "description": "Implements code changes based on CTO-approved prompts. Reports to CTO only.",
+      "prompt": "You are a Staff Engineer. Implement complete, production-ready code. Rules: NO TODO comments, NO truncated code, SECURITY FIRST. Report completion to CTO only.",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "fs.read": true,
+        "fs.write": true,
+        "fs.list": true,
+        "edit.apply": true
+      }
+    },
+    "reviewer": {
+      "name": "Code Reviewer",
+      "description": "Performs peer review of implementations. Reports to CTO only.",
+      "prompt": "You are the Code Reviewer. Review implementations for quality, security, and completeness. Provide clear feedback. Report to CTO only.",
+      "tools": {
+        "read": true,
+        "fs.read": true,
+        "fs.list": true
+      }
+    }
+  },
+
+  "permission": {
+    "bash.execute": "ask",
+    "fs.delete": "ask",
+    "edit.apply": "allow",
+    "fs.write": "allow",
+    "fs.read": "allow"
+  },
+
+  "mcp": {
+    "opencode-tools": {
+      "type": "local",
+      "command": ["opencode-tools", "mcp"],
+      "description": "Complete developer team automation - Foundry orchestration, Cowork agents, research, docs, architecture, code generation",
+      "enabled": true,
+      "timeout": 60000
+    },
+    "SequentialThinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "description": "Sequential thinking for complex problem solving",
+      "enabled": true,
+      "timeout": 30000
+    },
+    "Memory": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-memory@latest"],
+      "description": "Persistent memory across conversations",
+      "enabled": true,
+      "timeout": 10000
+    }
+  }
+}

@@ -28,13 +28,37 @@ export function getAvailableTools() {
   try {
     const manifests = discoverBundledPlugins();
     for (const m of manifests) {
-      tools.push({ id: m.id, name: m.name, description: `Discovered plugin (${m.adapterType})`, category: 'research', handler: async () => ({ manifest: m }) });
+      tools.push({
+        id: m.id,
+        name: m.name,
+        description: `Discovered plugin (${m.adapterType})`,
+        category: 'research',
+        handler: async () => ({
+          success: true,
+          runtime: 'plugin',
+          toolId: m.id,
+          message: 'Discovered bundled plugin manifest',
+          data: { manifest: m },
+        }),
+      });
     }
 
     // Also include any plugins already registered in the user's OpenCode home
     const system = discoverSystemPlugins();
     for (const m of system) {
-      tools.push({ id: m.id, name: m.name, description: `System-registered plugin (${m.adapterType})`, category: 'research', handler: async () => ({ manifest: m }) });
+      tools.push({
+        id: m.id,
+        name: m.name,
+        description: `System-registered plugin (${m.adapterType})`,
+        category: 'research',
+        handler: async () => ({
+          success: true,
+          runtime: 'plugin',
+          toolId: m.id,
+          message: 'Discovered system plugin manifest',
+          data: { manifest: m },
+        }),
+      });
     }
   } catch (err) {
     // ignore

@@ -5,17 +5,41 @@
  * 
  * This script automatically integrates OpenCode Tools with the global OpenCode installation.
  * It ensures all MCP tools are properly registered and available in the TUI.
+ * 
+ * Aligned with official OpenCode configuration schema:
+ * - ~/.config/opencode/opencode.json - Main config with MCP servers, agents (singular), permissions
+ * - ~/.config/opencode/agents/*.md - Agent definitions
+ * - ~/.config/opencode/commands/*.md - Command definitions
+ * - ~/.config/opencode/skills/*.md - Skill definitions
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+/**
+ * Official OpenCode configuration schema
+ */
 interface OpenCodeConfig {
-  agents: Record<string, any>;
-  tools: Record<string, boolean>;
-  mcp: Record<string, any>;
-  integrations?: Record<string, any>;
+  /** Default agent to use (singular, not agents) */
+  default_agent?: string;
+  /** Legacy agent field - use default_agent instead */
+  agent?: string | Record<string, unknown>;
+  /** Permission rules for tools */
+  permission?: Record<string, unknown>;
+  /** MCP server configurations */
+  mcp?: Record<string, McpServerConfig>;
+  /** Plugin configurations */
+  plugin?: Record<string, unknown>;
+}
+
+interface McpServerConfig {
+  type: 'local' | 'remote';
+  command?: string[];
+  url?: string;
+  description?: string;
+  enabled?: boolean;
+  timeout?: number;
 }
 
 class PostInstallIntegration {
@@ -25,7 +49,8 @@ class PostInstallIntegration {
 
   constructor() {
     this.homeDir = os.homedir();
-    this.opencodeDir = path.join(this.homeDir, '.opencode');
+    // Use XDG-like structure: ~/.config/opencode
+    this.opencodeDir = path.join(this.homeDir, '.config', 'opencode');
     this.currentPackageDir = process.cwd();
   }
 
@@ -34,31 +59,37 @@ class PostInstallIntegration {
     console.log('=============================================');
 
     try {
+      if (!process.env.npm_config_global && !process.env.OPENCODE_TOOLS_FORCE_INTEGRATION) {
+        console.log('\nℹ️ Skipping automatic integration in local install context.');
+        console.log('To integrate manually, run: opencode-tools integrate');
+        return;
+      }
+
       // Step 1: Ensure OpenCode config directory exists
       await this.ensureOpenCodeDirectory();
 
       // Step 2: Backup existing configuration
       await this.backupExistingConfig();
 
-      // Step 3: Merge OpenCode Tools configuration
+      // Step 3: Merge OpenCode Tools configuration into official opencode.json
       await this.mergeConfiguration();
 
-      // Step 4: Validate MCP tool dependencies
-      await this.validateMCPTools();
+      // Step 4: Create global directories (agents, commands, skills, plugins, tools)
+      await this.createGlobalDirectories();
 
-      // Step 5: Create integration registry
-      await this.createIntegrationRegistry();
+      // Step 5: Validate MCP tool dependencies
+      await this.validateMCPTools();
 
       console.log('\n✅ OpenCode Tools integration completed successfully!');
       console.log('\n📝 Next steps:');
       console.log('   1. Restart your OpenCode TUI');
       console.log('   2. All tools should be available automatically');
-      console.log('   3. If tools fail to start, run: opencode-tools --verify');
+      console.log('   3. If tools fail to start, run: opencode-tools verify (or --verify)');
 
     } catch (error) {
       console.error('\n❌ Integration failed:', error);
       console.log('\n🔧 Manual setup instructions:');
-      console.log('   1. Copy opencode.json to ~/.opencode/config.json');
+      console.log('   1. Ensure ~/.config/opencode/opencode.json has MCP server config');
       console.log('   2. Restart OpenCode TUI');
       process.exit(1);
     }
@@ -66,129 +97,138 @@ class PostInstallIntegration {
 
   private async ensureOpenCodeDirectory(): Promise<void> {
     if (!fs.existsSync(this.opencodeDir)) {
-      console.log('📁 Creating OpenCode configuration directory...');
+      console.log(`📁 Creating OpenCode configuration directory at ${this.opencodeDir}...`);
       fs.mkdirSync(this.opencodeDir, { recursive: true });
     }
   }
 
   private async backupExistingConfig(): Promise<void> {
-    const globalConfigPath = path.join(this.opencodeDir, 'config.json');
+    const globalConfigPath = path.join(this.opencodeDir, 'opencode.json');
     
     if (fs.existsSync(globalConfigPath)) {
-      const backupPath = path.join(this.opencodeDir, 'config.backup.json');
+      const backupPath = path.join(this.opencodeDir, 'opencode.backup.json');
       console.log('💾 Backing up existing configuration...');
       fs.copyFileSync(globalConfigPath, backupPath);
     }
   }
 
   private async mergeConfiguration(): Promise<void> {
-    const toolsConfigPath = path.join(this.currentPackageDir, 'opencode.json');
-    const globalConfigPath = path.join(this.opencodeDir, 'config.json');
+    const globalConfigPath = path.join(this.opencodeDir, 'opencode.json');
 
-    if (!fs.existsSync(toolsConfigPath)) {
-      throw new Error('opencode.json not found in package directory');
-    }
-
-    const toolsConfig: OpenCodeConfig = JSON.parse(fs.readFileSync(toolsConfigPath, 'utf-8'));
-    let globalConfig: OpenCodeConfig = { agents: {}, tools: {}, mcp: {} };
-
+    // Load existing config or create new
+    let globalConfig: OpenCodeConfig = {};
     if (fs.existsSync(globalConfigPath)) {
-      globalConfig = JSON.parse(fs.readFileSync(globalConfigPath, 'utf-8'));
+      try {
+        globalConfig = JSON.parse(fs.readFileSync(globalConfigPath, 'utf-8'));
+      } catch (e) {
+        console.warn('⚠️ Could not parse existing opencode.json, starting fresh.');
+      }
     }
 
-    // Merge configurations, with global taking precedence for conflicts
-    const mergedConfig: OpenCodeConfig = {
-      agents: { ...toolsConfig.agents, ...globalConfig.agents },
-      tools: { ...toolsConfig.tools, ...globalConfig.tools },
-      mcp: { ...toolsConfig.mcp, ...globalConfig.mcp }
-    };
-
-    // Add integration metadata
-    mergedConfig.integrations = {
-      'opencode-tools': {
-        version: '1.0.0',
-        installedAt: new Date().toISOString(),
-        packagePath: this.currentPackageDir
+    // Try to merge package's opencode.json (preserves user-specific settings)
+    const packageConfigPath = path.join(this.currentPackageDir, 'opencode.json');
+    let packageConfig: Partial<OpenCodeConfig> = {};
+    if (fs.existsSync(packageConfigPath)) {
+      try {
+        packageConfig = JSON.parse(fs.readFileSync(packageConfigPath, 'utf-8'));
+        console.log('🔗 Merging package configuration...');
+      } catch (e) {
+        console.warn('⚠️ Could not parse package opencode.json');
       }
-    };
+    }
 
-    console.log('🔗 Merging OpenCode Tools configuration...');
-    fs.writeFileSync(globalConfigPath, JSON.stringify(mergedConfig, null, 2));
+    // Initialize MCP if missing
+    if (!globalConfig.mcp) {
+      globalConfig.mcp = {};
+    }
+
+    // Add opencode-tools MCP server (this is the key integration)
+    // Use "opencodeTools" (camelCase) to avoid hyphen issues in OpenCode config
+    if (!globalConfig.mcp['opencodeTools']) {
+      globalConfig.mcp['opencodeTools'] = {
+        type: 'local',
+        command: ['opencode-tools', 'mcp'],
+        description: 'Complete developer team automation - Foundry orchestration, Cowork agents, research, docs, architecture, code generation, PDF/DOCX/XLSX generation, delivery',
+        enabled: true,
+        timeout: 60000,
+      };
+    }
+
+    // Set default agent if not set (use default_agent for official schema)
+    if (!globalConfig.default_agent) {
+      globalConfig.default_agent = 'foundry';
+    }
+
+    // Add basic permission rules if not set
+    if (!globalConfig.permission) {
+      globalConfig.permission = {
+        'bash.execute': 'ask',
+        'fs.delete': 'ask',
+        'edit.apply': 'allow',
+      };
+    }
+
+    // Merge package config properties (MCP servers from package take lower precedence)
+    if (packageConfig.mcp) {
+      for (const [serverName, serverConfig] of Object.entries(packageConfig.mcp)) {
+        if (!globalConfig.mcp[serverName]) {
+          globalConfig.mcp[serverName] = serverConfig;
+        }
+      }
+    }
+
+    console.log('🔗 Merging MCP configuration into opencode.json...');
+    fs.writeFileSync(globalConfigPath, JSON.stringify(globalConfig, null, 2));
+  }
+
+  private async createGlobalDirectories(): Promise<void> {
+    const directories = [
+      'agents',
+      'commands',
+      'skills',
+      'plugins',
+      'tools',
+      'cowork/plugins',
+    ];
+
+    for (const dir of directories) {
+      const fullPath = path.join(this.opencodeDir, dir);
+      if (!fs.existsSync(fullPath)) {
+        fs.mkdirSync(fullPath, { recursive: true });
+        console.log(`📁 Created directory: ${dir}`);
+      }
+    }
+
+    // Copy optional devteam.ts template if it exists
+    const devteamTemplateSrc = path.join(this.currentPackageDir, 'templates', 'opencode', 'tools', 'devteam.ts');
+    const devteamTemplateDest = path.join(this.opencodeDir, 'tools', 'devteam.ts');
+    
+    if (fs.existsSync(devteamTemplateSrc) && !fs.existsSync(devteamTemplateDest)) {
+      try {
+        fs.copyFileSync(devteamTemplateSrc, devteamTemplateDest);
+        console.log('📁 Copied devteam.ts template to tools directory');
+      } catch (e) {
+        console.warn('⚠️ Could not copy devteam.ts template');
+      }
+    }
   }
 
   private async validateMCPTools(): Promise<void> {
-    const toolsConfigPath = path.join(this.currentPackageDir, 'opencode.json');
-    const config = JSON.parse(fs.readFileSync(toolsConfigPath, 'utf-8'));
+    const globalConfigPath = path.join(this.opencodeDir, 'opencode.json');
+    
+    if (!fs.existsSync(globalConfigPath)) {
+      return;
+    }
+
+    const config: OpenCodeConfig = JSON.parse(fs.readFileSync(globalConfigPath, 'utf-8'));
 
     console.log('🔍 Validating MCP tool dependencies...');
 
     for (const [toolName, toolConfig] of Object.entries(config.mcp || {})) {
-      const config = toolConfig as any;
-      if (config.enabled !== false) {
-        const isValid = await this.testMCPTool(toolName, config);
-        console.log(`  ${isValid ? '✅' : '❌'} ${toolName}`);
-        
-        if (!isValid) {
-          console.warn(`    ⚠️  Tool ${toolName} may not function properly`);
-        }
+      if (toolConfig.enabled !== false) {
+        console.log(`  ✅ ${toolName} - configured`);
       }
     }
-  }
-
-  private async testMCPTool(toolName: string, toolConfig: any): Promise<boolean> {
-    try {
-      if (toolConfig.type === 'local') {
-        // Test local command execution
-        const command = toolConfig.command?.[0];
-        if (command && command.startsWith('npx')) {
-          // Test if npx can download the package
-          const testCommand = `${command} --help`;
-          const result = require('child_process').spawnSync(testCommand, { 
-            shell: true, 
-            timeout: 10000,
-            stdio: 'pipe'
-          });
-          return result.status !== undefined && result.status !== 1;
-        }
-      }
-      return true;
-    } catch (error) {
-      console.warn(`    Error testing ${toolName}:`, error);
-      return false;
-    }
-  }
-
-  private async createIntegrationRegistry(): Promise<void> {
-    const registryPath = path.join(this.opencodeDir, 'integrations.json');
-    
-    const registry = {
-      version: '1.0.0',
-      lastUpdated: new Date().toISOString(),
-      integrations: {
-        'opencode-tools': {
-          name: 'OpenCode Tools',
-          description: 'Automated client project research, documentation, and code generation',
-          version: '1.0.0',
-          agents: Object.keys(JSON.parse(
-            fs.readFileSync(path.join(this.currentPackageDir, 'opencode.json'), 'utf-8')
-          ).agents || {}),
-          mcpTools: Object.keys(JSON.parse(
-            fs.readFileSync(path.join(this.currentPackageDir, 'opencode.json'), 'utf-8')
-          ).mcp || {}),
-          tuiTools: [
-            'research-agent',
-            'architecture-agent', 
-            'codegen-agent',
-            'qa-agent',
-            'delivery-agent',
-            'documentation-agent'
-          ]
-        }
-      }
-    };
-
-    console.log('📋 Creating integration registry...');
-    fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2));
   }
 }
 

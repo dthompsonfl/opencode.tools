@@ -31,3 +31,6 @@ Respond with a single JSON object with the following structure:
 ## Instructions
 1. **System Architecture**: Generate a clear, simple diagram in Mermaid syntax. Use flowcharts or sequence diagrams to illustrate the main components and data flow.
 2. **Backlog**: Create a mock backlog with 3-5 high-level Epics. Each Epic must contain at least one Story with concrete Acceptance Criteria.
+3. **Bespoke Output**: Tailor architecture and backlog to the provided PRD/SOW context; avoid generic placeholder decisions.
+4. **Production Readiness**: Include operational concerns (security, observability, reliability) in architecture rationale and backlog stories.
+5. **Deliverable Scope**: Keep downstream implementation deliverables within code/docs/tests boundaries.

@@ -3,9 +3,9 @@
 
 ## Executive Summary
 
-The OpenCode Tools codebase has been fully upgraded to a production-ready state. Every specialized agent (Research, Architecture, CodeGen, QA, and Delivery) is now fully implemented with real TypeScript logic, replacing previous mock stubs. The system is designed for seamless integration into the global OpenCode installation, ensuring a unified user experience.
+The OpenCode Tools codebase has a solid architectural foundation with well-structured TypeScript code. The system is designed for seamless integration into the global OpenCode installation. However, significant gaps exist that block production deployment for Fortune-500 clients.
 
-**Final Assessment**: 100% Complete. All core agents are functional and integrated into the OpenCode TUI.
+**Current Assessment**: ⚠️ **PROTOTYPE / MVP** - Core Research Agent is functional, other agents have varying levels of implementation.
 
 ---
 
@@ -17,24 +17,27 @@ The OpenCode Tools codebase has been fully upgraded to a production-ready state.
    - Clean, organized TypeScript monorepo structure.
    - All necessary configuration files (package.json, tsconfig.json, jest.config.js) optimized for global installation.
 
-2. **Research Agent** - 100% Functional
+2. **Research Agent** - ✅ Production Ready
    - Enhanced with sophisticated scraping and normalization tools.
-   - PhD-level reasoning logic integrated via the PhDResearchWorkflow.
+   - Real-time search, Zod validation, and persistence implemented.
 
-3. **Architecture Agent** - 100% Functional
-   - Real implementation replaces mock logic.
-   - Generates Mermaid diagrams and structured development backlogs automatically.
+### ⚠️ **Partially Implemented Components**
 
-4. **CodeGen Agent** - 100% Functional
-   - Integrated with Desktop-Commander for real file operations.
+3. **Architecture Agent** - Basic Implementation
+   - Generates Mermaid diagrams and structured development backlogs.
+   - Some static/template-based output.
+
+4. **CodeGen Agent** - Basic Implementation
    - Automated scaffolding for multiple tech stacks.
+   - Limited file system integration.
 
-5. **QA Agent** - 100% Functional
-   - Real implementation for test plan generation and unit test scaffolding.
-   - Integration with TestSprite for automated quality gates.
+5. **QA Agent** - Basic Implementation
+   - Test plan generation and unit test scaffolding.
+   - Static test plans (TestSprite integration optional).
 
-6. **Delivery Agent** - 100% Functional
-   - Automated packaging, manifest generation, and handoff procedures.
+6. **Delivery Agent** - Basic Implementation
+   - Automated packaging and manifest generation.
+   - Handoff procedures need enhancement.
 
 ---
 
@@ -42,29 +45,38 @@ The OpenCode Tools codebase has been fully upgraded to a production-ready state.
 
 ### Post-Installation Hook
 - Running `npm install` now automatically triggers `scripts/post-install.ts`.
-- This script merges the local `opencode.json` configuration into the global `~/.opencode/config.json`.
-- All agents and MCP tools are registered globally, making them accessible from the primary OpenCode TUI without any manual configuration.
+- This script registers bundled plugins in `~/.config/opencode/plugins/`.
+- Core MCP tools are configured for reliable global execution.
 
-### MCP Tool Reliability
-- All MCP tools (SequentialThinking, Desktop-Commander, Memory, Serena, etc.) have been verified and configured for reliable global execution.
+### MCP Tool Configuration
+- **Core MCP Tools** (enabled): SequentialThinking, Memory, critical-thinking, DeepWiki-SSE
+- **Optional MCP Tools** (disabled by default): Desktop-Commander, TestSprite, next-devtools, Serena, Prisma
+- These optional tools can be enabled if installed separately.
 - Command-line diagnostics tool provided: `npm run verify:mcp`.
 
 ---
 
 ## Security & Reliability
 
-- **Secrets Management**: Integrated script-based rotation and secure storage patterns.
-- **Error Handling**: Comprehensive try/catch blocks with structured logging across all agents.
-- **Rate Limiting**: Intelligent exponential backoff implemented for all external tool calls.
-- **Audit Trails**: Every tool call and agent decision is logged to `runs/{runId}/manifest.json` for full traceability.
+- **Secrets Management**: Basic redaction implemented; full secrets management pending.
+- **Error Handling**: Try/catch blocks with structured logging across all agents.
+- **Rate Limiting**: Intelligent exponential backoff implemented for external tool calls.
+- **Audit Trails**: Tool calls can be logged via audit.* MCP tools.
 
 ---
 
 ## Summary of Completion
 
-- **Architecture**: Solid and scalable.
-- **Agents**: All real, no mocks.
-- **Integration**: Automatic and seamless.
-- **Tests**: 100% passing.
+- **Architecture**: Solid and scalable ✅
+- **Agents**: Research Agent production-ready; others have basic implementations ⚠️
+- **Integration**: Automatic and seamless ✅
+- **Tests**: Most tests passing (see PRODUCTION_READINESS_ASSESSMENT.md for details) ⚠️
 
-**Next Steps**: Use `npm run tui` to access the full suite of integrated tools.
+### Known Limitations
+
+- **Security**: Authentication/authorization not implemented (Fortune-500 blocker)
+- **Testing**: Some circular dependency issues in test suite
+- **Documentation Agent**: Uses templates (not LLM-powered)
+- **No LLM Integration**: Intelligence is hardcoded or template-based
+
+**Next Steps**: Use `npm run tui` to access the integrated tools, or see PRODUCTION_READINESS_ASSESSMENT.md for detailed production readiness checklist.

@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { ArtifactRecord } from '../types/run';
-import { redactor } from '../security/redaction';
+import { redactText } from '../security/redaction';
 
 export class ArtifactManager {
   private runDir: string;
@@ -32,9 +32,9 @@ export class ArtifactManager {
     // Redact content if it's text
     let contentToWrite = content;
     if (typeof content === 'string') {
-      contentToWrite = redactor.redact(content);
+      contentToWrite = redactText(content);
     } else if (Buffer.isBuffer(content) && type.startsWith('text/')) {
-       contentToWrite = Buffer.from(redactor.redact(content.toString('utf-8')));
+       contentToWrite = Buffer.from(redactText(content.toString('utf-8')));
     }
 
     await fs.promises.writeFile(fullPath, contentToWrite);

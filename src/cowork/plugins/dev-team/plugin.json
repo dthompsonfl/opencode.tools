@@ -1,8 +1,10 @@
 {
   "id": "dev-team",
   "name": "Dev Team",
-  "version": "1.0.0",
-  "description": "Default development team workflows and agents",
+  "version": "1.1.0",
+  "description": "Default development team workflows and agents with CTO-controlled communication and prompt engineering",
   "author": "OpenCode Tools Team",
-  "license": "MIT"
+  "license": "MIT",
+  "agents": ["cto", "pm", "implementer", "qa", "security", "docs", "architect", "reviewer", "performance", "prompt-engineer"],
+  "commands": ["feature-dev", "bugfix", "code-review", "security-audit", "release-prep", "prompt-sweep"]
 }

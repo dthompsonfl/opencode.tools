@@ -2,7 +2,7 @@
 ## Comprehensive Documentation Overview
 
 **Version**: 1.0.0  
-**Last Updated**: 2026-01-24  
+**Last Updated**: 2026-02-16  
 **Status**: 📚 Production Ready
 
 ---
@@ -31,6 +31,7 @@ OpenCode Tools uses a multi-layer documentation approach to serve different audi
 ### 🚨 Production Readiness
 - **[PRODUCTION_READINESS_ASSESSMENT.md](../PRODUCTION_READINESS_ASSESSMENT.md)** - Security, reliability gaps
 - **[TODO.md](../TODO.md)** - Prioritized action items and timeline
+- **[PRODUCTION_DELIVERABLE_POLICY.md](./PRODUCTION_DELIVERABLE_POLICY.md)** - Mandatory release scope and bespoke output standards
 - [src/security/](../src/security/) - Security patterns and implementation
 
 ### 🎓 PhD-Level Research Quality
@@ -254,6 +255,7 @@ Implementing comprehensive testing:
 | **Action Items** | TODO.md | PRODUCTION_READINESS_ASSESSMENT.md |
 | **Timeline** | TODO.md | PRODUCTION_READINESS_ASSESSMENT.md |
 | **PhD-Level Quality** | TODO.md | PROMPT.md |
+| **Deliverable Scope** | docs/PRODUCTION_DELIVERABLE_POLICY.md | AGENTS.md, README.md |
 
 ---
 

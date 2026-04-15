@@ -42,7 +42,7 @@ class AuditLogger {
         this.logPath = path.join(runDir, 'toolcalls.jsonl');
     }
     async log(record) {
-        const redactedRecord = redaction_1.redactor.redactObject(record);
+        const redactedRecord = (0, redaction_1.redactText)(JSON.stringify(record));
         const line = JSON.stringify(redactedRecord) + '\n';
         await fs.promises.appendFile(this.logPath, line, 'utf-8');
     }

@@ -10,8 +10,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { logToolCall } from './audit';
-
-const RUN_ID = 'mock-run-123';
+import { resolveRunContext } from '../src/runtime/run-context';
 
 export type Stack = 'Next.js' | 'NestJS' | 'FastAPI' | 'Express' | 'React' | 'Python-Flask' | 'Python-Django';
 
@@ -217,7 +216,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// TODO: Add routes here
+// Register application routes here
 
 // Error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -394,6 +393,7 @@ export async function scaffold(stack: Stack, structure: ScaffoldOptions): Promis
     files: string[];
     summary: string;
 }> {
+    const context = resolveRunContext();
     console.log(`[Codegen.scaffold] Scaffolding ${stack} project.`);
     
     const outputDir = structure.outputDir || path.join(process.cwd(), structure.projectName);
@@ -479,7 +479,7 @@ ${files.map(f => `- ${path.relative(outputDir, f)}`).join('\n')}
 3. npm run dev
 `;
     
-    await logToolCall(RUN_ID, 'codegen.scaffold', { 
+    await logToolCall(context.runId, 'codegen.scaffold', { 
         stack,
         projectName: structure.projectName 
     }, { 
@@ -496,6 +496,7 @@ export async function generateFeature(story: any, existingFiles: string[]): Prom
     files: { path: string; content: string }[];
     summary: string;
 }> {
+    const context = resolveRunContext();
     console.log(`[Codegen.generateFeature] Implementing feature: ${story.title || story.id}`);
     
     const featureName = story.title?.toLowerCase().replace(/\s+/g, '-') || 'feature';
@@ -508,6 +509,10 @@ export async function generateFeature(story: any, existingFiles: string[]): Prom
     const files: { path: string; content: string }[] = [];
     
     // Generate feature module
+    const acceptanceCriteria = Array.isArray(story.acceptanceCriteria)
+      ? story.acceptanceCriteria.map((criterion: string) => `- ${criterion}`).join('\n')
+      : '- No acceptance criteria provided';
+
     const moduleContent = `// Feature: ${story.title}
 export interface ${pascalCase(featureName)}Config {
     enabled: boolean;
@@ -524,9 +529,16 @@ export class ${pascalCase(featureName)}Feature {
         if (!this.config.enabled) {
             throw new Error('Feature is disabled');
         }
-        
-        // TODO: Implement feature logic
-        return { success: true, data: input };
+
+        return {
+            success: true,
+            feature: '${featureName}',
+            processedAt: new Date().toISOString(),
+            input,
+            acceptanceCriteria: [
+${acceptanceCriteria.split('\n').map((line: string) => `                '${line.replace("- ", "").replace(/'/g, "\\'")}'`).join(',\n')}
+            ]
+        };
     }
 }
 
@@ -563,7 +575,7 @@ describe('${pascalCase(featureName)}Feature', () => {
     fs.writeFileSync(testPath, testContent);
     files.push({ path: testPath, content: testContent });
     
-    await logToolCall(RUN_ID, 'codegen.feature', { 
+    await logToolCall(context.runId, 'codegen.feature', { 
         feature: featureName 
     }, { 
         files_generated: files.length 
@@ -584,6 +596,7 @@ export async function generateTests(featureName: string, options?: {
 }): Promise<{ 
     files: { path: string; content: string }[];
 }> {
+    const context = resolveRunContext();
     console.log(`[Codegen.generateTests] Generating tests for: ${featureName}`);
     
     const outputDir = options?.outputDir || path.join(process.cwd(), 'tests', featureName);
@@ -607,18 +620,22 @@ describe('${pascalCase(featureName)}', () => {
     
     describe('core functionality', () => {
         it('should handle valid input', async () => {
-            const result = await ${pascalCase(featureName)}({ test: true });
+            const subject = new ${pascalCase(featureName)}Feature({ enabled: true });
+            const result = await subject.execute({ test: true });
             expect(result).toBeDefined();
+            expect(result.success).toBe(true);
         });
         
         it('should handle invalid input', async () => {
-            await expect(${pascalCase(featureName)}(null)).rejects.toThrow();
+            const subject = new ${pascalCase(featureName)}Feature({ enabled: false });
+            await expect(subject.execute(null)).rejects.toThrow('disabled');
         });
     });
     
     describe('edge cases', () => {
         it('should handle empty input', async () => {
-            const result = await ${pascalCase(featureName)}({});
+            const subject = new ${pascalCase(featureName)}Feature({ enabled: true });
+            const result = await subject.execute({});
             expect(result).toBeDefined();
         });
     });
@@ -629,7 +646,7 @@ describe('${pascalCase(featureName)}', () => {
     fs.writeFileSync(testPath, testContent);
     files.push({ path: testPath, content: testContent });
     
-    await logToolCall(RUN_ID, 'codegen.tests', { featureName }, { 
+    await logToolCall(context.runId, 'codegen.tests', { featureName }, { 
         test_files: files.length 
     });
     

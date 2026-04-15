@@ -1,19 +1,24 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { buildProvenance, resolveRunContext } from '../src/runtime/run-context';
 
 /**
  * Records every tool call for deterministic replay.
  */
 export async function logToolCall(runId: string, toolName: string, inputs: any, outputs: any): Promise<any> {
-    const runDir = path.join(process.cwd(), 'runs', runId);
+    const context = resolveRunContext(runId);
+    const runDir = path.join(process.cwd(), 'runs', context.runId);
     if (!fs.existsSync(runDir)) {
         fs.mkdirSync(runDir, { recursive: true });
     }
 
     const logPath = path.join(runDir, 'manifest.json');
+    const timestamp = new Date().toISOString();
     const entry = {
-        timestamp: new Date().toISOString(),
+        runId: context.runId,
+        timestamp,
         toolName,
+        provenance: buildProvenance(context.source, timestamp),
         inputs,
         outputs
     };
@@ -26,7 +31,7 @@ export async function logToolCall(runId: string, toolName: string, inputs: any, 
 
     fs.writeFileSync(logPath, JSON.stringify(manifest, null, 2));
     
-    return { success: true, message: "Tool call logged." };
+    return { success: true, runId: context.runId, message: "Tool call logged." };
 }
 
 /**

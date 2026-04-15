@@ -1,13 +1,10 @@
-/**
- * Redaction utility
- * Sanitizes outputs, logs, and artifacts.
- */
-export declare class Redactor {
-    private registry;
-    private replacement;
-    constructor();
-    redact(text: string): string;
-    redactObject(obj: any): any;
+export interface RedactionResult {
+    redactedText: string;
+    redactions: Array<{
+        type: string;
+        count: number;
+    }>;
 }
-export declare const redactor: Redactor;
+export declare function redactText(text: string): string;
+export declare function redactTextStructured(text: string): RedactionResult;
 //# sourceMappingURL=redaction.d.ts.map

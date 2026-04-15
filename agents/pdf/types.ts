@@ -149,7 +149,7 @@ export const ChartOptionsSchema = z.object({
 export type ChartOptions = z.infer<typeof ChartOptionsSchema>;
 
 export const ChartConfigSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   type: z.enum(CHART_TYPE_VALUES),
   title: z.string().optional(),
   description: z.string().optional(),

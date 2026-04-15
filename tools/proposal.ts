@@ -12,8 +12,7 @@ import * as path from 'path';
 import * as archiver from 'archiver';
 import { logToolCall } from './audit';
 import { ProjectStack, ProjectStructure } from './discovery';
-
-const RUN_ID = 'mock-run-123';
+import { resolveRunContext } from '../src/runtime/run-context';
 
 // Default hourly rates by role
 const HOURLY_RATES = {
@@ -234,6 +233,7 @@ function calculateTimeline(phases: CostEstimate[]): { weeks: number; milestones:
  * Generate proposal document
  */
 export async function generateProposal(inputs: any): Promise<{ proposal: string; metadata: any }> {
+    const context = resolveRunContext();
     console.log('[Proposal.generate] Generating proposal with real estimation logic.');
     
     // Extract project info with defaults
@@ -402,7 +402,7 @@ We look forward to working with you!
         generatedAt: new Date().toISOString()
     };
 
-    await logToolCall(RUN_ID, 'proposal.generate', { 
+    await logToolCall(context.runId, 'proposal.generate', { 
         projectName: inputs.projectName,
         complexity: complexity.level 
     }, { 
@@ -418,6 +418,7 @@ We look forward to working with you!
  * Peer review of proposal
  */
 export async function peerReview(proposal: any, reviewer: 'Delivery' | 'Legal' | 'Technical'): Promise<{ notes: string; score: number; recommendations: string[] }> {
+    const context = resolveRunContext();
     let notes = '';
     let score = 0;
     const recommendations: string[] = [];
@@ -445,7 +446,7 @@ export async function peerReview(proposal: any, reviewer: 'Delivery' | 'Legal' |
             break;
     }
 
-    await logToolCall(RUN_ID, 'proposal.peer_review', { reviewer }, { score, recommendations: recommendations.length });
+    await logToolCall(context.runId, 'proposal.peer_review', { reviewer }, { score, recommendations: recommendations.length });
     return { notes, score, recommendations };
 }
 
@@ -453,6 +454,7 @@ export async function peerReview(proposal: any, reviewer: 'Delivery' | 'Legal' |
  * Export proposal package
  */
 export async function packageExport(proposalData: { proposal: string; metadata: any }): Promise<{ packagePath: string; files: string[] }> {
+    const context = resolveRunContext();
     console.log('[Proposal.package.export] Packaging proposal documents.');
     
     const outputDir = path.join(process.cwd(), 'artifacts', 'client');
@@ -491,7 +493,7 @@ export async function packageExport(proposalData: { proposal: string; metadata: 
         archive.finalize();
     });
     
-    await logToolCall(RUN_ID, 'proposal.package.export', { timestamp }, { 
+    await logToolCall(context.runId, 'proposal.package.export', { timestamp }, { 
         packagePath,
         filesIncluded: files.length 
     });

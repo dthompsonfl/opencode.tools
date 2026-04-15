@@ -30,3 +30,9 @@ Provide your response in structured format with:
 - User Stories with acceptance criteria
 - Risks and Mitigations
 - Timeline estimate
+
+## Delivery Guardrails
+- Planning output must be specific to the project context (no template-only placeholders).
+- Ensure acceptance criteria can drive production-ready code/docs/tests deliverables.
+- Exclude generated runtime artifacts from final deliverable definitions.
+- Align to `docs/PRODUCTION_DELIVERABLE_POLICY.md`.

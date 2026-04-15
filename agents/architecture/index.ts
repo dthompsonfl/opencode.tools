@@ -1,5 +1,6 @@
 import { logger } from '../../src/runtime/logger';
-import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
+import { resolveRunContext } from '../../src/runtime/run-context';
 
 export interface ArchitectureOutput {
     architectureDiagram: string;
@@ -16,6 +17,11 @@ export interface ArchitectureOutput {
             }>;
         }>;
     };
+    metadata?: {
+        runId: string;
+        generatedAt: string;
+        prdHash: string;
+    };
 }
 
 export class ArchitectureAgent {
@@ -27,6 +33,8 @@ export class ArchitectureAgent {
      * Generates a complete system architecture and backlog based on PRD content.
      */
     async execute(input: { prd_content: string }): Promise<ArchitectureOutput> {
+        const context = resolveRunContext();
+        const generatedAt = new Date().toISOString();
         logger.info('Architecture Agent started', { agent: this.agentName });
 
         // Real implementation simulates reasoning through structured logic
@@ -37,7 +45,12 @@ export class ArchitectureAgent {
 
         return {
             architectureDiagram,
-            backlog
+            backlog,
+            metadata: {
+                runId: context.runId,
+                generatedAt,
+                prdHash: crypto.createHash('sha256').update(input.prd_content).digest('hex')
+            }
         };
     }
 
@@ -54,20 +67,30 @@ export class ArchitectureAgent {
     `;
     }
 
-    private generateBacklog(_content: string) {
+    public async generateArchitecture(prd_content: string): Promise<string> {
+        const result = await this.execute({ prd_content });
+        return result.architectureDiagram;
+    }
+
+    public generateBacklog(content: string) {
+        const slug = crypto.createHash('sha1').update(content).digest('hex').slice(0, 6).toUpperCase();
+        const topics = Array.from(new Set(content.toLowerCase().match(/[a-z][a-z0-9-]{4,}/g) ?? []))
+            .slice(0, 3);
+
         return {
             epics: [
                 {
-                    id: `EPIC-${uuidv4().substring(0, 4)}`,
+                    id: `EPIC-${slug}`,
                     title: "System Foundation",
-                    description: "Initial infrastructure and core service setup.",
-                    stories: [
-                        {
-                            id: `STORY-${uuidv4().substring(0, 4)}`,
-                            title: "Infrastructure as Code Setup",
-                            acceptanceCriteria: ["Terraform/CloudFormation scripts validated", "Deployment environment ready"]
-                        }
-                    ]
+                    description: `Initial infrastructure and core service setup informed by PRD topics: ${topics.join(', ') || 'core requirements'}.`,
+                    stories: (topics.length > 0 ? topics : ['infrastructure']).map((topic, index) => ({
+                        id: `STORY-${slug}-${index + 1}`,
+                        title: `Implement ${topic} capability`,
+                        acceptanceCriteria: [
+                            `${topic} requirements traced to PRD`,
+                            `${topic} implementation validated with automated checks`
+                        ]
+                    }))
                 }
             ]
         };

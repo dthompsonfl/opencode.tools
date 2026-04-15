@@ -1,30 +1,28 @@
 /**
- * Command Registry for Cowork Plugin System
- * 
- * Singleton registry for registering and looking up commands.
- */
-
-import { CommandDefinition } from '../types';
-
-/**
  * Command Registry
- * Singleton for registering and looking up commands
+ * 
+ * Central registry for managing and executing Cowork commands.
+ * Provides singleton pattern for global command access.
  */
+
+import {
+  CoworkCommand,
+  CoworkCommandResult,
+  RegistryEntry,
+  CommandDefinition,
+} from '../types';
+import { logger } from '../../runtime/logger';
+
 export class CommandRegistry {
   private static instance: CommandRegistry;
-  private commands: Map<string, CommandDefinition>;
-  private nameIndex: Map<string, string>;
-
-  /**
-   * Private constructor for singleton pattern
-   */
+  private commands: Map<string, RegistryEntry<CommandDefinition>>;
+  
   private constructor() {
-    this.commands = new Map<string, CommandDefinition>();
-    this.nameIndex = new Map<string, string>();
+    this.commands = new Map();
   }
-
+  
   /**
-   * Get singleton instance
+   * Get the singleton instance of CommandRegistry
    */
   public static getInstance(): CommandRegistry {
     if (!CommandRegistry.instance) {
@@ -32,92 +30,154 @@ export class CommandRegistry {
     }
     return CommandRegistry.instance;
   }
-
+  
   /**
-   * Register a command
-   * If a command with the same ID exists, it will be overridden
-   * 
-   * @param command - Command definition to register
+   * Register a single command
    */
-  public register(command: CommandDefinition): void {
-    // Store by ID
-    this.commands.set(command.id, command);
+  public register(command: CoworkCommand | CommandDefinition, source?: string): void {
+    if (this.commands.has(command.id)) {
+      logger.warn(`Command with id '${command.id}' already registered, overwriting`);
+    }
     
-    // Index by lowercase name for case-insensitive lookup
-    const nameKey = command.name.toLowerCase();
-    this.nameIndex.set(nameKey, command.id);
+    this.commands.set(command.id, {
+      id: command.id,
+      item: command,
+      registeredAt: new Date(),
+      source,
+    });
+    
+    logger.debug(`Registered command: ${command.name} (${command.id})`);
   }
-
+  
   /**
-   * Register multiple commands at once
-   * 
-   * @param commands - Array of command definitions
+   * Register multiple commands
    */
-  public registerMany(commands: CommandDefinition[]): void {
+  public registerMany(commands: Array<CoworkCommand | CommandDefinition>, source?: string): void {
     for (const command of commands) {
-      this.register(command);
+      this.register(command, source);
     }
   }
-
+  
   /**
-   * Get command by ID
-   * 
-   * @param id - Command ID
-   * @returns Command definition or undefined if not found
+   * Unregister a command by id
    */
-  public get(id: string): CommandDefinition | undefined {
-    return this.commands.get(id);
+  public unregister(commandId: string): boolean {
+    const deleted = this.commands.delete(commandId);
+    if (deleted) {
+      logger.debug(`Unregistered command: ${commandId}`);
+    }
+    return deleted;
+  }
+  
+  /**
+   * Get a command by id
+   */
+  public get(commandId: string): CommandDefinition | undefined {
+    const entry = this.commands.get(commandId);
+    return entry?.item;
   }
 
   /**
-   * Get command by name (case-insensitive)
-   * 
-   * @param name - Command name
-   * @returns Command definition or undefined if not found
+   * Get a command by name (or ID)
    */
   public getByName(name: string): CommandDefinition | undefined {
-    const nameKey = name.toLowerCase();
-    const id = this.nameIndex.get(nameKey);
+    const normalizedName = name.trim().toLowerCase();
+
+    // Try getting by ID first
+    const byId = this.get(name);
+    if (byId) return byId;
+
+    const byNormalizedId = this.get(normalizedName);
+    if (byNormalizedId) return byNormalizedId;
+
+    // Search by name property
+    return Array.from(this.commands.values()).find(
+      (entry) => entry.item.name.trim().toLowerCase() === normalizedName
+    )?.item;
+  }
+  
+  /**
+   * Check if a command exists
+   */
+  public has(commandId: string): boolean {
+    return this.commands.has(commandId);
+  }
+  
+  /**
+   * Execute a command by id with the given arguments
+   */
+  public async execute(commandId: string, args: string[] = []): Promise<CoworkCommandResult> {
+    const command = this.get(commandId);
     
-    if (!id) {
-      return undefined;
+    if (!command) {
+      return {
+        success: false,
+        error: `Command '${commandId}' not found`,
+      };
     }
     
-    return this.commands.get(id);
+    try {
+      logger.debug(`Executing command: ${command.name}`, { args });
+      const handler = command.handler || this.createFallbackHandler(command);
+      const result = await handler(args);
+      logger.debug(`Command executed successfully: ${command.name}`);
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Command execution failed: ${command.name}`, error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
   }
-
+  
   /**
    * List all registered commands
-   * 
-   * @returns Array of all command definitions
    */
   public list(): CommandDefinition[] {
-    return Array.from(this.commands.values());
+    return Array.from(this.commands.values()).map(entry => entry.item);
   }
-
+  
   /**
-   * Check if command exists
-   * 
-   * @param id - Command ID
-   * @returns True if command exists
+   * Get all registered command ids
    */
-  public has(id: string): boolean {
-    return this.commands.has(id);
+  public getIds(): string[] {
+    return Array.from(this.commands.keys());
   }
-
+  
   /**
    * Clear all registered commands
-   * Useful for testing
    */
   public clear(): void {
     this.commands.clear();
-    this.nameIndex.clear();
+    logger.debug('Cleared all commands from registry');
+  }
+  
+  /**
+   * Get the count of registered commands
+   */
+  public count(): number {
+    return this.commands.size;
   }
 
   /**
-   * Get the number of registered commands
+   * Backward-compatible alias for count()
    */
   public size(): number {
-    return this.commands.size;
+    return this.count();
+  }
+
+  private createFallbackHandler(command: CommandDefinition): (args: string[]) => Promise<CoworkCommandResult> {
+    return async (args: string[]): Promise<CoworkCommandResult> => {
+      return {
+        success: true,
+        data: {
+          commandId: command.id,
+          args,
+          body: command.body || '',
+        },
+      };
+    };
   }
 }

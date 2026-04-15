@@ -55,10 +55,10 @@ class ArtifactManager {
         // Redact content if it's text
         let contentToWrite = content;
         if (typeof content === 'string') {
-            contentToWrite = redaction_1.redactor.redact(content);
+            contentToWrite = (0, redaction_1.redactText)(content);
         }
         else if (Buffer.isBuffer(content) && type.startsWith('text/')) {
-            contentToWrite = Buffer.from(redaction_1.redactor.redact(content.toString('utf-8')));
+            contentToWrite = Buffer.from((0, redaction_1.redactText)(content.toString('utf-8')));
         }
         await fs.promises.writeFile(fullPath, contentToWrite);
         const hash = crypto.createHash('sha256').update(contentToWrite).digest('hex');

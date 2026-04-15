@@ -1,18 +1,14 @@
 import { TUIResearchAgent } from './tui-agents';
 import { ResearchParams } from './tui-agents';
-/**
- * OpenCode TUI Tools Registration
- *
- * This module registers all TUI-accessible tools with the OpenCode TUI system.
- * These tools are ONLY accessible through the TUI interface and cannot be
- * called via standalone CLI commands.
- */
+import type { ResearchResult } from './tui-agents';
+import { PluginManifest } from './plugins/discovery';
+import { loadAllPlugins } from './cowork/plugin-loader';
 export interface TUITool {
     id: string;
     name: string;
     description: string;
     category: 'research' | 'documentation' | 'codegen' | 'qa' | 'delivery' | 'cowork';
-    handler: (args: any) => Promise<any>;
+    handler: (args: unknown) => Promise<TUIExecutionResult>;
     parameters?: TUIParameter[];
 }
 export interface TUIParameter {
@@ -20,23 +16,35 @@ export interface TUIParameter {
     type: 'string' | 'number' | 'boolean' | 'array';
     required: boolean;
     description: string;
-    default?: any;
+    default?: unknown;
 }
-/**
- * Register TUI tools with OpenCode
- */
-export declare function registerTUITools(): TUITool[];
-/**
- * Extended TUI Research Agent with file support
- */
+export interface TUIExecutionResult {
+    success: boolean;
+    runtime: 'native-agent' | 'cowork' | 'foundry' | 'plugin';
+    toolId: string;
+    message: string;
+    data?: unknown;
+    error?: string;
+}
+export interface CoworkRuntimeAdapter {
+    executeCommand(commandId: string, args: string[]): Promise<unknown>;
+    runAgent(agentId: string, task: string, context?: Record<string, unknown>): Promise<unknown>;
+}
+export interface FoundryRuntimeAdapter {
+    runWorkflow(intent: string, repoRoot?: string): Promise<unknown>;
+}
+export interface TUIRuntimeAdapters {
+    cowork: CoworkRuntimeAdapter;
+    foundry: FoundryRuntimeAdapter;
+}
+export interface RegisterTUIToolsOptions {
+    runtimeAdapters?: Partial<TUIRuntimeAdapters>;
+    manifests?: PluginManifest[];
+    pluginLoader?: typeof loadAllPlugins;
+}
+export declare function registerTUITools(options?: RegisterTUIToolsOptions): TUITool[];
 export declare class TUIResearchAgentExtended extends TUIResearchAgent {
-    /**
-     * Run research from a brief file (TUI-accessible)
-     */
-    runWithBriefFile(briefPath: string, outputPath?: string): Promise<any>;
-    /**
-     * Run research with parameters (TUI-accessible)
-     */
-    runWithParams(params: ResearchParams): Promise<any>;
+    runWithBriefFile(briefPath: string, _outputPath?: string): Promise<unknown>;
+    runWithParams(params: ResearchParams): Promise<ResearchResult>;
 }
 //# sourceMappingURL=tui-integration.d.ts.map

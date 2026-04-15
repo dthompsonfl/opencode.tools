@@ -26,7 +26,7 @@ export const SessionList: React.FC<Props> = ({ sessions, onSelect }) => {
       </Box>
       <SelectInput
         items={items}
-        onSelect={(item) => onSelect(item.value)}
+        onSelect={(item: any) => onSelect(item.value)}
       />
     </Box>
   );

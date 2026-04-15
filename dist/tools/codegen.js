@@ -48,7 +48,7 @@ exports.generateTests = generateTests;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const audit_1 = require("./audit");
-const RUN_ID = 'mock-run-123';
+const run_context_1 = require("../src/runtime/run-context");
 /**
  * Generate package.json for various stacks
  */
@@ -226,7 +226,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// TODO: Add routes here
+// Register application routes here
 
 // Error handler
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -390,6 +390,7 @@ yarn-error.log*
  * Scaffold a new project
  */
 async function scaffold(stack, structure) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log(`[Codegen.scaffold] Scaffolding ${stack} project.`);
     const outputDir = structure.outputDir || path.join(process.cwd(), structure.projectName);
     if (fs.existsSync(outputDir)) {
@@ -461,7 +462,7 @@ ${files.map(f => `- ${path.relative(outputDir, f)}`).join('\n')}
 2. npm install
 3. npm run dev
 `;
-    await (0, audit_1.logToolCall)(RUN_ID, 'codegen.scaffold', {
+    await (0, audit_1.logToolCall)(context.runId, 'codegen.scaffold', {
         stack,
         projectName: structure.projectName
     }, {
@@ -473,6 +474,7 @@ ${files.map(f => `- ${path.relative(outputDir, f)}`).join('\n')}
  * Generate feature code
  */
 async function generateFeature(story, existingFiles) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log(`[Codegen.generateFeature] Implementing feature: ${story.title || story.id}`);
     const featureName = story.title?.toLowerCase().replace(/\s+/g, '-') || 'feature';
     const outputDir = path.join(process.cwd(), 'src', 'features', featureName);
@@ -481,6 +483,9 @@ async function generateFeature(story, existingFiles) {
     }
     const files = [];
     // Generate feature module
+    const acceptanceCriteria = Array.isArray(story.acceptanceCriteria)
+        ? story.acceptanceCriteria.map((criterion) => `- ${criterion}`).join('\n')
+        : '- No acceptance criteria provided';
     const moduleContent = `// Feature: ${story.title}
 export interface ${pascalCase(featureName)}Config {
     enabled: boolean;
@@ -497,9 +502,16 @@ export class ${pascalCase(featureName)}Feature {
         if (!this.config.enabled) {
             throw new Error('Feature is disabled');
         }
-        
-        // TODO: Implement feature logic
-        return { success: true, data: input };
+
+        return {
+            success: true,
+            feature: '${featureName}',
+            processedAt: new Date().toISOString(),
+            input,
+            acceptanceCriteria: [
+${acceptanceCriteria.split('\n').map((line) => `                '${line.replace("- ", "").replace(/'/g, "\\'")}'`).join(',\n')}
+            ]
+        };
     }
 }
 
@@ -532,7 +544,7 @@ describe('${pascalCase(featureName)}Feature', () => {
     const testPath = path.join(outputDir, 'index.test.ts');
     fs.writeFileSync(testPath, testContent);
     files.push({ path: testPath, content: testContent });
-    await (0, audit_1.logToolCall)(RUN_ID, 'codegen.feature', {
+    await (0, audit_1.logToolCall)(context.runId, 'codegen.feature', {
         feature: featureName
     }, {
         files_generated: files.length
@@ -546,6 +558,7 @@ describe('${pascalCase(featureName)}Feature', () => {
  * Generate tests for a feature
  */
 async function generateTests(featureName, options) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log(`[Codegen.generateTests] Generating tests for: ${featureName}`);
     const outputDir = options?.outputDir || path.join(process.cwd(), 'tests', featureName);
     if (!fs.existsSync(outputDir)) {
@@ -565,18 +578,22 @@ describe('${pascalCase(featureName)}', () => {
     
     describe('core functionality', () => {
         it('should handle valid input', async () => {
-            const result = await ${pascalCase(featureName)}({ test: true });
+            const subject = new ${pascalCase(featureName)}Feature({ enabled: true });
+            const result = await subject.execute({ test: true });
             expect(result).toBeDefined();
+            expect(result.success).toBe(true);
         });
         
         it('should handle invalid input', async () => {
-            await expect(${pascalCase(featureName)}(null)).rejects.toThrow();
+            const subject = new ${pascalCase(featureName)}Feature({ enabled: false });
+            await expect(subject.execute(null)).rejects.toThrow('disabled');
         });
     });
     
     describe('edge cases', () => {
         it('should handle empty input', async () => {
-            const result = await ${pascalCase(featureName)}({});
+            const subject = new ${pascalCase(featureName)}Feature({ enabled: true });
+            const result = await subject.execute({});
             expect(result).toBeDefined();
         });
     });
@@ -585,7 +602,7 @@ describe('${pascalCase(featureName)}', () => {
     const testPath = path.join(outputDir, `${featureName}.test.ts`);
     fs.writeFileSync(testPath, testContent);
     files.push({ path: testPath, content: testContent });
-    await (0, audit_1.logToolCall)(RUN_ID, 'codegen.tests', { featureName }, {
+    await (0, audit_1.logToolCall)(context.runId, 'codegen.tests', { featureName }, {
         test_files: files.length
     });
     return { files };

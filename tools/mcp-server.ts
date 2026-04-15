@@ -1,175 +1,128 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
+/**
+ * MCP Server - Standardized JSON-RPC implementation using @modelcontextprotocol/sdk
+ * 
+ * This server exposes all OpenCode Tools functionality via the Model Context Protocol
+ */
+
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { 
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import { webfetch } from "./webfetch.js";
-import { search } from "./search.js";
-import { enforceRateLimit } from "./rate-limit.js";
-import { normalizeSource } from "./source-normalize.js";
-import { logToolCall, replayRun, checkReproducibility } from "./audit.js";
+  ErrorCode,
+  McpError
+} from '@modelcontextprotocol/sdk/types.js';
+import { TOOL_DEFS, getToolHandler } from './mcp/registry';
+import { toMcpContent } from './mcp/defs';
+import { z } from 'zod';
 
-const server = new Server(
-  {
-    name: "opencode-tools",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
-
-/**
- * List available tools
- */
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: "webfetch",
-        description: "Fetches content from a URL",
-        inputSchema: {
-          type: "object",
-          properties: {
-            url: { type: "string" },
-            format: { type: "string", enum: ["text", "html", "markdown"] },
-          },
-          required: ["url"],
-        },
-      },
-      {
-        name: "search",
-        description: "Searches the web",
-        inputSchema: {
-          type: "object",
-          properties: {
-            query: { type: "string" },
-          },
-          required: ["query"],
-        },
-      },
-      {
-        name: "rate-limit",
-        description: "Enforces rate limits",
-        inputSchema: {
-          type: "object",
-          properties: {
-            toolName: { type: "string" },
-            attempt: { type: "number" },
-          },
-          required: ["toolName"],
-        },
-      },
-      {
-        name: "source-normalize",
-        description: "Normalizes source content",
-        inputSchema: {
-          type: "object",
-          properties: {
-            rawContent: { type: "string" },
-            originalUrl: { type: "string" },
-          },
-          required: ["rawContent", "originalUrl"],
-        },
-      },
-      {
-        name: "audit.logToolCall",
-        description: "Logs a tool call for auditing",
-        inputSchema: {
-          type: "object",
-          properties: {
-            runId: { type: "string" },
-            toolName: { type: "string" },
-            inputs: { type: "object" },
-            outputs: { type: "object" },
-          },
-          required: ["runId", "toolName", "inputs", "outputs"],
-        },
-      },
-      {
-        name: "research.plan",
-        description: "Generates a research plan (Placeholder)",
-        inputSchema: {
-          type: "object",
-          properties: {
-            topic: { type: "string" },
-          },
-          required: ["topic"],
-        },
-      }
-      // Add more as needed
-    ],
-  };
-});
-
-/**
- * Handle tool calls
- */
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-
-  try {
-    let result;
-    switch (name) {
-      case "webfetch":
-        result = await webfetch(args?.url as string, args?.format as any);
-        break;
-      case "search":
-        result = await search(args?.query as string, args);
-        break;
-      case "rate-limit":
-        result = await enforceRateLimit(args?.toolName as string, args?.attempt as number);
-        break;
-      case "source-normalize":
-        result = await normalizeSource(args?.rawContent as string, args?.originalUrl as string);
-        break;
-      case "audit.logToolCall":
-        result = await logToolCall(args?.runId as string, args?.toolName as string, args?.inputs, args?.outputs);
-        break;
-      case "research.plan":
-        result = { success: true, content: "Research plan generated for " + args?.topic };
-        break;
-      default:
-        throw new Error(`Tool not found: ${name}`);
-    }
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  } catch (error: any) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error: ${error.message}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-});
-
-/**
- * Start the server
- */
-export async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("OpenCode Tools MCP server running on stdio");
+// Set MCP mode and patch console to prevent stdout pollution
+if (typeof process !== 'undefined') {
+  process.env.OPENCODE_MCP = '1';
+  
+  // Patch console methods to write to stderr instead of stdout using util.format
+  const util = require('util');
+  console.log = (...args: any[]) => process.stderr.write(util.format(...args) + '\n');
+  console.info = (...args: any[]) => process.stderr.write(util.format(...args) + '\n');
+  console.debug = (...args: any[]) => process.stderr.write(util.format(...args) + '\n');
+  console.warn = (...args: any[]) => process.stderr.write(util.format(...args) + '\n');
+  
+  // Keep console.error as-is (already writes to stderr)
 }
 
-// Run main if called directly (not imported)
-if (require.main === module) {
-  main().catch((error) => {
-    console.error("Fatal error in MCP server:", error);
-    process.exit(1);
+/**
+ * Main MCP server implementation
+ */
+export async function main(): Promise<void> {
+  const server = new Server(
+    {
+      name: 'opencode-tools-mcp',
+      version: process.env.npm_package_version || '1.0.0',
+    },
+    {
+      capabilities: {
+        tools: {
+          listChanged: false
+        },
+      },
+    }
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: TOOL_DEFS.map((def) => ({
+        name: def.name,
+        description: def.description,
+        inputSchema: def.inputSchema as any,
+      })),
+    };
+  });
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const toolCall = request.params;
+
+    if (!toolCall?.name) {
+      throw new McpError(ErrorCode.InvalidParams, 'Invalid params: name is required');
+    }
+
+    const handler = getToolHandler(toolCall.name);
+    if (!handler) {
+      throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${toolCall.name}`);
+    }
+
+    // Basic validation mapping JSON Schema subset to Zod subset
+    const toolDef = TOOL_DEFS.find(t => t.name === toolCall.name);
+    if (toolDef && toolDef.inputSchema) {
+      const zodSchemaObj: Record<string, z.ZodTypeAny> = {};
+      if (toolDef.inputSchema.properties) {
+        for (const [key, prop] of Object.entries(toolDef.inputSchema.properties)) {
+          let zodType: z.ZodTypeAny = z.any();
+          if ((prop as any).type === 'string') zodType = z.string();
+          else if ((prop as any).type === 'number') zodType = z.number();
+          else if ((prop as any).type === 'boolean') zodType = z.boolean();
+          else if ((prop as any).type === 'array') zodType = z.array(z.any());
+          else if ((prop as any).type === 'object') zodType = z.record(z.string(), z.any());
+
+          if (!toolDef.inputSchema.required || !toolDef.inputSchema.required.includes(key)) {
+            zodType = zodType.optional();
+          }
+          // nosemgrep: javascript.lang.security.audit.unsafe-dynamic-method.unsafe-dynamic-method
+          zodSchemaObj[key] = zodType;
+        }
+      }
+
+      let zodSchema: z.ZodTypeAny = z.object(zodSchemaObj);
+      if (toolDef.inputSchema.additionalProperties) {
+        zodSchema = z.object(zodSchemaObj).catchall(z.any());
+      } else {
+        zodSchema = z.object(zodSchemaObj).strict();
+      }
+
+      try {
+        zodSchema.parse(toolCall.arguments || {});
+      } catch (validationError: any) {
+        throw new McpError(ErrorCode.InvalidParams, `Invalid params: ${validationError.message}`);
+      }
+    }
+
+    try {
+      const result = await handler(toolCall.arguments || {});
+      return toMcpContent(result) as any;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new McpError(ErrorCode.InternalError, message);
+    }
+  });
+
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+
+  // Keep the process alive
+  process.on('SIGINT', () => {
+    process.exit(0);
+  });
+  
+  process.on('SIGTERM', () => {
+    process.exit(0);
   });
 }

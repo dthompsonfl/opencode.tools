@@ -12,8 +12,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { logToolCall } from './audit';
+import { resolveRunContext } from '../src/runtime/run-context';
 
-const RUN_ID = 'mock-run-123';
 
 /**
  * Interface for a captured discovery item.
@@ -411,6 +411,7 @@ function generateRecommendations(stack: ProjectStack, structure: ProjectStructur
  * Start a new discovery session - analyzes a project directory
  */
 export async function startSession(clientName: string, projectPath?: string): Promise<DiscoveryResult> {
+    const context = resolveRunContext();
     const targetPath = projectPath || process.cwd();
     const sessionId = `disc-${uuidv4().substring(0, 8)}`;
     
@@ -478,7 +479,7 @@ export async function startSession(clientName: string, projectPath?: string): Pr
         artifacts
     };
     
-    await logToolCall(RUN_ID, 'discovery.session.start', { clientName, projectPath }, { 
+    await logToolCall(context.runId, 'discovery.session.start', { clientName, projectPath }, { 
         sessionId, 
         languages: languages.length,
         frameworks: frameworks.length,
@@ -499,6 +500,7 @@ export async function exportSession(sessionId: string, result: DiscoveryResult):
     artifacts: DiscoveryItem[];
     summary: string;
 }> {
+    const context = resolveRunContext();
     const outputDir = path.join(process.cwd(), 'artifacts', 'discovery');
     
     if (!fs.existsSync(outputDir)) {
@@ -544,7 +546,7 @@ ${result.recommendations.map(r => `- ${r}`).join('\n')}
     
     fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
     
-    await logToolCall(RUN_ID, 'discovery.session.export', { sessionId }, { 
+    await logToolCall(context.runId, 'discovery.session.export', { sessionId }, { 
         filePath, 
         artifactCount: result.artifacts.length 
     });

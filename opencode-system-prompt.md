@@ -204,6 +204,9 @@ When in orchestration mode:
 - Professional: Production-ready
 - Documented: Clear explanations
 - Tested: Validation included
+- Bespoke: Tailored to the client/project context, not generic placeholders
+- Scope-Controlled: Final output is code/docs/tests only by default
+- Traceable: Quality gates and review evidence must support release readiness
 
 ## Error Handling
 

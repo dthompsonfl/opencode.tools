@@ -33,19 +33,82 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.startTui = startTui;
+require("./runtime/register-path-aliases");
 const React = __importStar(require("react"));
 const ink_1 = require("ink");
 const App_1 = require("./tui/App");
+const tui_foundry_1 = require("./tui-foundry");
+/**
+ * Check if Foundry TUI mode should be launched
+ *
+ * Checks for:
+ * - --foundry flag
+ * --mode=foundry flag
+ * - FOUNDRY_TUI_MODE environment variable
+ */
+function shouldLaunchFoundryTUI() {
+    const args = process.argv.slice(2);
+    // Check for explicit flags
+    if (args.includes('--foundry')) {
+        return true;
+    }
+    // Check for --mode=foundry
+    if (args.some(arg => arg === '--mode=foundry' || arg === '--mode foundry')) {
+        return true;
+    }
+    // Check for environment variable
+    if (process.env.FOUNDRY_TUI_MODE === 'true' || process.env.FOUNDRY_TUI_MODE === '1') {
+        return true;
+    }
+    return false;
+}
+/**
+ * Remove Foundry-specific flags from arguments before parsing
+ */
+function cleanArguments(args) {
+    return args.filter(arg => {
+        // Remove --foundry flag
+        if (arg === '--foundry') {
+            return false;
+        }
+        // Remove --mode=foundry but keep other --mode values
+        if (arg === '--mode=foundry') {
+            return false;
+        }
+        return true;
+    });
+}
 /**
  * OpenCode TUI Application Entry Point
  *
  * Replaces the previous readline-based implementation with a React Ink TUI.
+ *
+ * Supports two modes:
+ * 1. Standard TUI mode (default) - General-purpose cowork interface
+ * 2. Foundry TUI mode (--foundry, --mode=foundry) - Enterprise delegation workspace
  */
-async function main() {
+async function startTui() {
+    // Check if Foundry TUI mode is requested
+    if (shouldLaunchFoundryTUI()) {
+        const rawArgs = process.argv.slice(2);
+        const cleanArgs = cleanArguments(rawArgs);
+        const args = (0, tui_foundry_1.parseFoundryTUIArguments)(cleanArgs);
+        await (0, tui_foundry_1.runFoundryTUI)(args);
+        return;
+    }
     // Clear the console for a clean TUI start
-    console.clear();
+    process.stdout.write('\x1b[2J\x1b[0f');
+    // Configure stdin to prevent mouse event issues
+    if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.setEncoding('utf8');
+    }
     // Render the Ink app
-    const { waitUntilExit } = (0, ink_1.render)(React.createElement(App_1.App));
+    const { waitUntilExit } = (0, ink_1.render)(React.createElement(App_1.App), {
+        patchConsole: false,
+    });
     try {
         await waitUntilExit();
     }
@@ -54,9 +117,9 @@ async function main() {
         process.exit(1);
     }
 }
-// Start the TUI
+// Start the TUI if run directly
 if (require.main === module) {
-    main().catch(err => {
+    startTui().catch(err => {
         console.error('Fatal error:', err);
         process.exit(1);
     });

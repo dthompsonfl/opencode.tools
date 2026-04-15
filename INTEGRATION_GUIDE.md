@@ -1,181 +1,129 @@
 # OpenCode Tools Integration Guide
 
-## 🚀 Quick Start
+This guide defines the current integration model for OpenCode Tools with strict production-deliverable guardrails enabled by default.
 
-The OpenCode Tools are now fully integrated into the opencode CLI! You can access the Research Agent directly from the command line.
+Production policy: `docs/PRODUCTION_DELIVERABLE_POLICY.md`.
+Strategic backlog and enhancement roadmap: `docs/ENTERPRISE_GAP_BACKLOG.md`.
 
-### Prerequisites
+## 1) Integration Surfaces
+
+OpenCode Tools currently integrates through four primary surfaces:
+
+- CLI runtime: `src/cli.ts`
+- TUI runtime: `src/tui-app.ts`
+- Programmatic TUI tool registration: `src/index.ts` and `src/tui-integration.ts`
+- MCP server adapter: `tools/mcp-server.ts`
+
+## 2) Current Maturity (Accurate View)
+
+Use this matrix as the source of truth for integration depth.
+
+| Surface | Current State | Notes |
+|---|---|---|
+| Foundry orchestration (`orchestrate`) | Implemented, active | Default orchestration path; still has enterprise hardening backlog items |
+| Cowork plugin loading/dispatch | Implemented | Command/agent/plugin registration works; further runtime hardening remains |
+| CLI command portfolio (`research`, `docs`, `architect`, `pdf`) | Partial | Some command handlers are still lighter-weight than full production workflows |
+| TUI tool registration | Implemented | Supports multiple agents and Cowork tools; integration helper modules still have improvement opportunities |
+| MCP tool layer | Partial | Works for several paths; some tool contracts and realism improvements remain |
+
+The default orchestration path enforces production-deliverable scope (code/docs/tests only) and release-gate validation.
+
+## 3) Setup and Verification
+
 ```bash
-# Ensure you're in the opencode-tools directory
-cd Developer/opencode-tools
+# Install dependencies
+npm install
 
-# Build the project (if not already built)
+# Build
 npm run build
 
-# Link globally (if not already linked)
+# Full quality baseline
+npm run lint
+npx tsc --noEmit
+npm run validate:deliverable-scope
+npm run test:all
+```
+
+Optional local global-link workflow:
+
+```bash
 npm link --force
+opencode-tools tui
+opencode-tools orchestrate --project "MyApp"
 ```
 
-## � Client Delivery Workflow (New)
+## 4) CLI Integration
 
-The new autonomous delivery workflow orchestrates research, analysis, review, and export in a single sweep.
-
-### Usage
+Primary operator commands:
 
 ```bash
-npm run run:delivery
+opencode-tools orchestrate --project "MyApp"
+opencode-tools tui
+opencode-tools cowork list
+opencode-tools cowork run <command> [args...]
+opencode-tools cowork agents
+opencode-tools cowork plugins
+opencode-tools mcp
 ```
 
-This command executes `scripts/run-delivery.ts`, which:
-1.  Initializes a new **Run** with a unique ID.
-2.  Executes **Research** using the Google Search Provider (or mock).
-3.  Performs **Analysis** (Claim extraction, Citation scoring).
-4.  Runs a **Peer Review** loop against the `ResearchRubric`.
-5.  **Exports** a final delivery bundle ZIP.
+Notes:
 
-### Output
+- `orchestrate` routes through the Foundry orchestration flow.
+- `cowork` commands depend on loaded plugins and native agent configuration.
+- Command behavior maturity is not uniform across all subsystems yet.
 
-Artifacts are stored in `runs/<runId>/`:
--   `manifest.json`: Complete run state and gate results.
--   `toolcalls.jsonl`: Audit log of all tool executions.
--   `artifacts/`:
-    -   `evidence/`: Raw fetched documents.
-    -   `deliverables/`: Generated Markdown reports.
--   `delivery-bundle.zip`: Final package.
+## 5) TUI Integration
 
-## �📊 Research Agent Commands (Legacy CLI)
+TUI paths are centered on:
 
-> **Note**: The CLI commands below refer to the interactive TUI tools. for the full automated workflow, use `npm run run:delivery`.
+- `src/tui-app.ts`
+- `src/tui/agents/index.ts`
+- `src/tui-integration.ts`
+- `src/tui-commands.ts`
 
-### 1. Full Research with Client Brief
-```bash
-opencode research --brief examples/client-brief.json --output artifacts/my-research.json --verbose
-```
+Foundry orchestration is available through the orchestrator agent in the TUI session flow. For details, see `TUI_INTEGRATION.md`.
 
-**Options:**
-- `--brief <path>`: Path to client brief JSON file (required)
-- `--output <path>`: Output path for results (default: artifacts/research-output.json)
-- `--format <format>`: Output format - json or md (default: json)
-- `--verbose`: Show detailed progress and summary
+## 6) Cowork and Plugin Integration
 
-### 2. Quick Research (Minimal Input)
-```bash
-opencode quick-research --company "AcmeCorp" --industry "Healthcare" --description "A healthcare technology company"
-```
+Cowork integration stack:
 
-**Options:**
-- `--company <name>`: Company name (required)
-- `--industry <industry>`: Industry type (required)
-- `--description <desc>`: Company description (optional)
-- `--output <path>`: Output path (default: artifacts/quick-research.json)
+- Loader: `src/cowork/plugin-loader.ts`
+- Registries: `src/cowork/registries/*`
+- Runtime orchestrator: `src/cowork/orchestrator/cowork-orchestrator.ts`
+- Permission gate: `src/cowork/permissions/tool-gate.ts`
 
-## 🔧 Utility Commands
+Plugin discovery includes bundled and system plugins. Continue to treat plugin trust, compatibility, and signature hardening as active backlog work.
 
-### List Available Agents
-```bash
-opencode agents
-```
-Shows all available agents and their capabilities.
+## 7) Foundry Integration Model
 
-### Check System Status
-```bash
-opencode status
-```
-Shows build status, available agents, and templates.
+Foundry bridge and orchestration modules:
 
-### Initialize Project Structure
-```bash
-opencode init
-```
-Creates default directories and example files.
+- `src/foundry/orchestrator.ts`
+- `src/foundry/cowork-bridge.ts`
+- `src/foundry/state-definition.ts`
+- `src/foundry/quality-gates.ts`
+- `src/foundry/collaboration-hub.ts`
 
-## 📁 Output Structure
+Foundry currently orchestrates iterative task execution, peer review phases, and quality gate command execution. Persistence and deterministic replay hardening are tracked in backlog items FND-001/FND-003 and AUD-*.
 
-Research generates multiple files:
+## 8) Contradictions Removed
 
-```
-artifacts/
-├── research-output.json          # Complete research results
-├── research-output-dossier.json  # Research dossier only
-├── research-output-sources.json  # Sources and citations
-└── research-output-meta.json     # Provenance metadata
-```
+The following older statements are no longer valid and should not be reused:
 
-## 🎯 Example Workflow
+- "Fully integrated and production-complete" claims without qualification.
+- "Research Agent is exclusive to TUI" claims.
+- "No standalone CLI access" claims.
 
-1. **Initialize project:**
-   ```bash
-   opencode init
-   ```
+The current supported model is mixed CLI + TUI + MCP, with explicit maturity caveats.
 
-2. **Run research:**
-   ```bash
-   opencode research --brief examples/client-brief.json --verbose
-   ```
+## 9) Documentation Governance
 
-3. **View results:**
-   ```bash
-   cat artifacts/research-output-dossier.json
-   ```
+When integration behavior changes, update all of:
 
-4. **Quick research for new client:**
-   ```bash
-   opencode quick-research --company "NewCorp" --industry "FinTech"
-   ```
+- `README.md`
+- `AGENTS.md`
+- `INTEGRATION_GUIDE.md`
+- `TUI_INTEGRATION.md`
+- `docs/ENTERPRISE_GAP_BACKLOG.md` (if status or priorities shift)
 
-## 🔍 Research Output Example
-
-The Research Agent generates comprehensive dossiers including:
-
-```json
-{
-  "companySummary": "TechCorp operates in the FinTech industry...",
-  "industryOverview": "The fintech industry is experiencing rapid growth...",
-  "competitors": [
-    {
-      "name": "Stripe",
-      "url": "https://stripe.com",
-      "differentiation": "Market leader with comprehensive API ecosystem",
-      "marketPosition": "Dominant player in online payments"
-    }
-  ],
-  "techStack": {
-    "frontend": ["React", "TypeScript"],
-    "backend": ["Node.js", "PostgreSQL"],
-    "infrastructure": ["AWS", "Docker"],
-    "thirdParty": ["Stripe", "SendGrid"]
-  },
-  "risks": [
-    "Regulatory compliance requirements",
-    "Competition from established players"
-  ],
-  "opportunities": [
-    "Growing demand for contactless payments",
-    "International expansion potential"
-  ],
-  "recommendations": [
-    "Prioritize security and compliance certifications",
-    "Develop strategic partnerships"
-  ]
-}
-```
-
-## 🛠️ Integration with OpenCode
-
-The Research Agent is now fully accessible through the opencode CLI:
-
-- **Command:** `opencode research` or `opencode quick-research`
-- **Global Access:** Available from any directory after `npm link`
-- **Structured Output:** JSON format with provenance tracking
-- **Error Handling:** Comprehensive error messages and validation
-
-## 📋 Next Steps
-
-With the Research Agent integrated, you can:
-
-1. **Use it immediately** for client research
-2. **Build Documentation Agent** to consume research dossiers
-3. **Extend the CLI** as new agents are developed
-4. **Create custom workflows** combining multiple agents
-
-The foundation is solid and ready for extending with additional agents!
+Do not merge integration changes without aligning docs to runtime reality.

@@ -1,188 +1,101 @@
 # OpenCode TUI Integration
 
-This document explains how to integrate the OpenCode Tools Research Agent into the OpenCode TUI system.
+This document describes the current TUI integration model for OpenCode Tools.
 
-## 🔗 Integration Points
+Canonical readiness and backlog status is tracked in `docs/ENTERPRISE_GAP_BACKLOG.md`.
+Production deliverable policy is defined in `docs/PRODUCTION_DELIVERABLE_POLICY.md`.
 
-The Research Agent is designed to be **exclusively** accessible through the OpenCode TUI. There are no standalone CLI commands.
+## 1) Scope and Truth Statement
 
-### 1. Main Integration Module
+- The TUI is a primary interactive interface for multi-agent operation.
+- The TUI is **not** the only interface; CLI and MCP paths also exist.
+- Do not claim exclusive TUI access for research or orchestration workflows.
 
-**File:** `src/index.ts`
+## 2) Runtime Entry and Core Files
 
-```typescript
-import { registerTUITools, researchTools } from 'opencode-tools';
+- TUI entrypoint: `src/tui-app.ts`
+- TUI app shell: `src/tui/App.tsx`
+- Agent catalog and behavior: `src/tui/agents/index.ts`
+- Store and state: `src/tui/store/store.tsx`
+- Generic TUI tool registry surface: `src/tui-integration.ts`
+- Legacy/helper registration module: `src/tui-commands.ts`
 
-// Get all available TUI tools
-const tools = registerTUITools();
+## 3) Orchestrator Behavior in TUI
 
-// Execute a specific tool
-const result = await executeTool('research-agent', {
-  mode: 'interactive'
-});
+The orchestrator agent in `src/tui/agents/index.ts` supports interactive commands inside a session:
+
+- `help`
+- `status`
+- `run <intent>` (Foundry execution with quality gates)
+- `quick <intent>` (Foundry execution without quality gates)
+- `spawn <agentId> <task>` (direct Cowork spawn path)
+
+`run` mode reports deliverable-scope pass/fail from Foundry release validation.
+
+Natural-language input is interpreted as Foundry intent execution when no explicit command is provided.
+
+## 4) TUI Tool Registration Path
+
+Programmatic TUI tool registration uses:
+
+- `registerTUITools()` from `src/tui-integration.ts`
+- `getAvailableTools()` / `executeTool()` from `src/index.ts`
+
+Current registration includes:
+
+- Built-in TUI agents (research, architecture, codegen)
+- Discovered plugin metadata
+- Cowork commands and agents surfaced as TUI tools
+
+## 5) Known Integration Gaps
+
+The following are active improvement areas and should be treated as non-final:
+
+- `src/tui-commands.ts` still contains placeholder helper patterns for prompt/file picker integration.
+- `src/tui-integration.ts` includes legacy comments claiming TUI-only availability; runtime model is broader.
+- Foundry TUI route modules under `foundry/foundry/tui/routes/*` are not yet fully coupled to production runtime state transitions.
+
+Track remediation in:
+
+- UIX-002, UIX-003 (`docs/ENTERPRISE_GAP_BACKLOG.md`)
+
+## 6) Integration Validation Checklist
+
+After TUI integration changes, run:
+
+```bash
+npm run lint
+npm run build
+npx tsc --noEmit
+npm run validate:deliverable-scope
+npm run test:unit
+npm run test:e2e
 ```
 
-### 2. TUI Command Registration
+Manual checks:
 
-**File:** `src/tui-commands.ts`
+1. Start TUI (`npm run tui`).
+2. Create a new orchestrator session.
+3. Execute `run <intent>` and confirm Foundry report is displayed.
+4. Execute `status` and verify transcript + last Foundry run details.
+5. Verify Cowork command and agent tools appear when plugins are loaded.
 
-This module provides ready-to-use TUI command registration:
+## 7) Recommended Integration Pattern
 
-```typescript
-import { registerResearchAgentWithTUI, tuiIntegration } from 'opencode-tools/src/tui-commands';
+For new TUI features:
 
-// Method 1: Register with TUI registry
-registerResearchAgentWithTUI(tuiRegistry);
+1. Add typed agent/tool behavior in `src/tui/agents/index.ts` or `src/tui-integration.ts`.
+2. Keep state transitions explicit through `src/tui/store/store.tsx` actions.
+3. Route orchestration to Foundry/Cowork runtime modules rather than duplicating orchestration logic in UI handlers.
+4. Add or update unit/e2e coverage for the interaction flow.
+5. Update docs (`README.md`, `INTEGRATION_GUIDE.md`, this file, and backlog status when relevant).
 
-// Method 2: Direct TUI integration
-tuiIntegration.initialize(tuiContext);
-```
+## 8) Deprecated Claims
 
-## 🎯 Usage Patterns
+These statements are deprecated and should not be reintroduced:
 
-### Pattern 1: Interactive Research (Full TUI Experience)
+- "TUI-exclusive access only"
+- "No CLI access"
+- "No standalone command paths"
 
-```typescript
-import { researchTools } from 'opencode-tools';
-
-// Launch interactive research with TUI prompts
-await researchTools.interactive();
-```
-
-### Pattern 2: Research from Brief File
-
-```typescript
-import { researchTools } from 'opencode-tools';
-
-// Research using a client brief file
-const result = await researchTools.fromBrief(
-  'path/to/client-brief.json',
-  'artifacts/output.json'
-);
-```
-
-### Pattern 3: Quick Research
-
-```typescript
-import { researchTools } from 'opencode-tools';
-
-// Quick research with minimal parameters
-const result = await researchTools.quick(
-  'AcmeCorp',
-  'Healthcare',
-  'A healthcare technology company'
-);
-```
-
-## 🔧 TUI Menu Integration
-
-The Research Agent provides a structured menu for TUI integration:
-
-```typescript
-const researchMenu = {
-  title: 'Research Agent',
-  description: 'Generate comprehensive research dossiers',
-  options: [
-    {
-      key: '1',
-      label: '🔄 Interactive Research',
-      description: 'Guided research with TUI prompts',
-      action: () => researchTools.interactive()
-    },
-    {
-      key: '2', 
-      label: '📄 Research from Brief',
-      description: 'Research using client brief file',
-      action: () => researchTools.fromBrief(briefPath, outputPath)
-    },
-    {
-      key: '3',
-      label: '⚡ Quick Research',
-      description: 'Fast research with minimal input',
-      action: () => researchTools.quick(company, industry, description)
-    }
-  ]
-};
-```
-
-## 📋 TUI Implementation Requirements
-
-To integrate the Research Agent into your TUI:
-
-### 1. Import the Integration Module
-
-```typescript
-import { tuiIntegration } from 'opencode-tools/src/tui-commands';
-```
-
-### 2. Initialize in TUI Context
-
-```typescript
-// In your TUI initialization
-function initializeTUI() {
-  const tuiContext = createTUIContext();
-  
-  // Register Research Agent
-  tuiIntegration.initialize(tuiContext);
-  
-  // The Research Agent is now available in TUI menus
-}
-```
-
-### 3. Access Research Results
-
-```typescript
-// Research results are automatically saved to artifacts/
-const results = {
-  dossier: 'artifacts/CompanyName-research-2024-01-23-dossier.json',
-  sources: 'artifacts/CompanyName-research-2024-01-23-sources.json',
-  meta: 'artifacts/CompanyName-research-2024-01-23-meta.json'
-};
-```
-
-## 🚫 What NOT to Do
-
-❌ **Do NOT create standalone CLI commands**  
-❌ **Do NOT register global npm binaries**  
-❌ **Do NOT allow direct command-line access**  
-
-✅ **ONLY access through TUI interface**  
-✅ **ONLY use TUI-provided prompts and menus**  
-✅ **ONLY execute within TUI context**  
-
-## 🔄 Data Flow
-
-1. **TUI Launch** → User selects Research Agent from menu
-2. **Parameter Collection** → TUI collects parameters via prompts/file picker
-3. **Agent Execution** → Research Agent runs within TUI context
-4. **Progress Updates** → TUI displays progress and status
-5. **Result Delivery** → Results saved to artifacts/ and displayed in TUI
-
-## 📊 Output Structure
-
-Research results are saved in structured format:
-
-```
-artifacts/
-├── CompanyName-research-timestamp.json          # Complete results
-├── CompanyName-research-timestamp-dossier.json  # Research dossier
-├── CompanyName-research-timestamp-sources.json  # Citations
-└── CompanyName-research-timestamp-meta.json     # Provenance
-```
-
-## 🔒 Security Considerations
-
-- No direct file system access outside TUI context
-- All paths validated through TUI file picker
-- Results automatically organized in artifacts/
-- Provenance metadata for audit trail
-- No standalone execution capability
-
-## 🎯 Next Steps
-
-1. **Integrate with TUI** - Import and initialize in your TUI application
-2. **Test Research Agent** - Verify it works within TUI context
-3. **Add Documentation Agent** - Extend with additional agents
-4. **Build Workflows** - Create multi-agent TUI workflows
-
-The Research Agent is now ready for **exclusive TUI access** - no CLI hijacking possible!
+Current model is intentionally multi-surface: TUI, CLI, and MCP.

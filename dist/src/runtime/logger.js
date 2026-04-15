@@ -69,7 +69,7 @@ exports.logger = winston_1.default.createLogger({
 });
 // If we're not in production, log to the `console` with the format:
 // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
-if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test' && process.env.OPENCODE_MCP !== '1') {
     exports.logger.add(new winston_1.default.transports.Console({
         format: winston_1.default.format.combine(winston_1.default.format.colorize(), winston_1.default.format.simple())
     }));

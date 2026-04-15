@@ -1,6 +1,3 @@
-/**
- * F1: Delivery artifacts
- */
 export declare function generateRunbook(architecture: any): Promise<{
     runbook: string;
 }>;

@@ -91,7 +91,7 @@ class WebFetcher {
                 return false;
             return true;
         });
-        return redaction_1.redactor.redact(cleanLines.join('\n'));
+        return (0, redaction_1.redactText)(cleanLines.join('\n'));
     }
 }
 exports.WebFetcher = WebFetcher;

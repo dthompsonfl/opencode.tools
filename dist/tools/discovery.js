@@ -50,7 +50,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const uuid_1 = require("uuid");
 const audit_1 = require("./audit");
-const RUN_ID = 'mock-run-123';
+const run_context_1 = require("../src/runtime/run-context");
 /**
  * Detect programming languages from file extensions
  */
@@ -365,6 +365,7 @@ function generateRecommendations(stack, structure, risks) {
  * Start a new discovery session - analyzes a project directory
  */
 async function startSession(clientName, projectPath) {
+    const context = (0, run_context_1.resolveRunContext)();
     const targetPath = projectPath || process.cwd();
     const sessionId = `disc-${(0, uuid_1.v4)().substring(0, 8)}`;
     console.log(`[Discovery] Starting analysis session ${sessionId} for: ${clientName}`);
@@ -423,7 +424,7 @@ async function startSession(clientName, projectPath) {
         recommendations,
         artifacts
     };
-    await (0, audit_1.logToolCall)(RUN_ID, 'discovery.session.start', { clientName, projectPath }, {
+    await (0, audit_1.logToolCall)(context.runId, 'discovery.session.start', { clientName, projectPath }, {
         sessionId,
         languages: languages.length,
         frameworks: frameworks.length,
@@ -437,6 +438,7 @@ async function startSession(clientName, projectPath) {
  * Export discovery session artifact
  */
 async function exportSession(sessionId, result) {
+    const context = (0, run_context_1.resolveRunContext)();
     const outputDir = path.join(process.cwd(), 'artifacts', 'discovery');
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
@@ -477,7 +479,7 @@ ${result.recommendations.map(r => `- ${r}`).join('\n')}
         summary
     };
     fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
-    await (0, audit_1.logToolCall)(RUN_ID, 'discovery.session.export', { sessionId }, {
+    await (0, audit_1.logToolCall)(context.runId, 'discovery.session.export', { sessionId }, {
         filePath,
         artifactCount: result.artifacts.length
     });

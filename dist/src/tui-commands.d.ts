@@ -1,19 +1,21 @@
-/**
- * OpenCode TUI Command Registration
- *
- * This file registers the Research Agent as a TUI-accessible command.
- * Import this into the main OpenCode TUI to make the Research Agent available.
- */
+import { TUIExecutionResult } from './tui-integration';
 import { TUIResearchAgent } from './tui-agents';
-/**
- * Research Agent TUI Command
- *
- * Usage in TUI:
- * - Navigate to Tools menu
- * - Select "Research Agent"
- * - Choose mode: Interactive, From Brief, or Quick Research
- */
-export declare const researchCommand: {
+type ToolExecutor = (toolId: string, args: unknown) => Promise<TUIExecutionResult>;
+export interface PromptAdapter {
+    prompt(message: string): Promise<string>;
+    pickFile(message: string): Promise<string | null>;
+}
+export interface ResearchCommandDependencies {
+    promptAdapter?: PromptAdapter;
+    executeTool?: ToolExecutor;
+}
+export interface TUIMenuOption {
+    key: string;
+    label: string;
+    description: string;
+    action: () => Promise<TUIExecutionResult | void>;
+}
+export interface TUICommandDefinition {
     id: string;
     name: string;
     description: string;
@@ -21,46 +23,32 @@ export declare const researchCommand: {
     menu: {
         title: string;
         description: string;
-        options: {
-            key: string;
-            label: string;
-            description: string;
-            action: () => Promise<void>;
-        }[];
+        options: TUIMenuOption[];
     };
-};
-/**
- * Register Research Agent with OpenCode TUI
- *
- * Call this function from the main TUI application to register the Research Agent
- */
-export declare function registerResearchAgentWithTUI(tuiRegistry: any): void;
-/**
- * Alternative: Direct TUI integration pattern
- *
- * If the TUI system supports direct integration, use this pattern:
- */
+}
+export declare function createReadlinePromptAdapter(input?: NodeJS.ReadableStream, output?: NodeJS.WritableStream): PromptAdapter;
+export declare function createResearchCommand(dependencies?: ResearchCommandDependencies): TUICommandDefinition;
+export declare function registerResearchAgentWithTUI(tuiRegistry: {
+    registerCommand: (command: TUICommandDefinition) => void;
+}, dependencies?: ResearchCommandDependencies): void;
+export declare const researchCommand: TUICommandDefinition;
 export declare const tuiIntegration: {
-    /**
-     * Initialize Research Agent in TUI context
-     */
-    initialize(tuiContext: any): void;
-    /**
-     * Get Research Agent instance for direct TUI access
-     */
+    initialize(tuiContext: {
+        tools: {
+            register: (tool: {
+                id: string;
+                name: string;
+                category: string;
+                description: string;
+                handlers: {
+                    interactive: () => Promise<TUIExecutionResult>;
+                    fromBrief: (briefPath: string) => Promise<TUIExecutionResult>;
+                    quick: (company: string, industry: string, description?: string) => Promise<TUIExecutionResult>;
+                };
+            }) => void;
+        };
+    }): void;
     getAgent(): TUIResearchAgent;
 };
-/**
- * Example TUI integration usage:
- *
- * // In main TUI application
- * import { tuiIntegration } from 'opencode-tools/src/tui-commands';
- *
- * // Initialize Research Agent
- * tuiIntegration.initialize(tuiContext);
- *
- * // Access Research Agent directly
- * const agent = tuiIntegration.getAgent();
- * await agent.runInteractive();
- */
+export {};
 //# sourceMappingURL=tui-commands.d.ts.map

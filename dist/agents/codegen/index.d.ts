@@ -7,6 +7,6 @@ export declare class CodeGenAgent {
      * In a production environment, this integrates with LLM to generate code
      * and uses Desktop-Commander to write files.
      */
-    prototype(backlogItem: BacklogItem): Promise<ProjectScaffoldResult>;
+    execute(backlogItem: BacklogItem): Promise<ProjectScaffoldResult>;
 }
 //# sourceMappingURL=index.d.ts.map

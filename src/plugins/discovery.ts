@@ -35,7 +35,7 @@ export function discoverBundledPlugins(packageRoot?: string): PluginManifest[] {
 }
 
 export function discoverSystemPlugins(opencodeDir?: string): PluginManifest[] {
-  const home = opencodeDir || path.join(os.homedir(), '.opencode');
+  const home = opencodeDir || path.join(os.homedir(), '.config', 'opencode');
   const pluginsDir = path.join(home, 'plugins');
   if (!fs.existsSync(pluginsDir)) return [];
 

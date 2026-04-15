@@ -1,351 +1,263 @@
 # OpenCode Tools
 
-# OpenCode Tools
-
-**A Complete Apple-Level Engineering Team in a Single Package**
+**Foundry-driven autonomous engineering team orchestration for OpenCode.**
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/opencode/ai-tool)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Automated client project research, documentation, and code generation toolkit with self-iterative orchestration.
+OpenCode Tools provides a multi-agent runtime that combines Foundry orchestration, Cowork plugin-based delegation, and a TUI/CLI operator interface.
 
-## Overview
+## Current Status
 
-OpenCode Tools is a comprehensive suite of autonomous agents that acts as your complete development team:
+- Foundry is now the default orchestrator agent in `opencode.json`.
+- Cowork command/agent/plugin loading is integrated and test-covered.
+- Quality gates run through lint/build/typecheck/tests plus strict deliverable-scope validation.
+- Production-deliverable enforcement is enabled by default (`enforceDeliverableScope: true`): generated artifacts are excluded/reported, and release approval fails on blocking non-source artifacts.
+- `docs/ENTERPRISE_GAP_BACKLOG.md` tracks optional strategic enhancements beyond the default production delivery path.
 
-- **Research Agent**: Automated client and industry intelligence gathering
-- **Documentation Agent**: World-class PRD, SOW, and specification generation  
-- **Architecture Agent**: System design and backlog creation
-- **PDF Agent**: Professional document generation with charts and diagrams
-- **Code Generation Agent**: Full-stack project scaffolding and implementation
-- **Orchestrator Agent**: Self-iterative coordination of all agents
+## Core Capabilities
 
-## Global Installation
+- **Foundry Orchestration**: phased execution, iterative loops, peer review, and release gating.
+- **Cowork Runtime**: command registry, agent registry, plugin loading, permission gates, persistent event bus, Postgres-backed workspace/blackboard storage, and a Phase 1 workflow foundation.
+- **Specialized Agents**: research, docs, architecture, codegen, QA, delivery, PDF generation.
+- **Operator Interfaces**: interactive TUI and CLI commands for orchestration and plugin operations.
+- **Production Deliverable Guardrails**: strict scope policy (code/docs/tests only), bespoke-output constraints, and release blocking on scope violations.
+
+## 🆕 Collaborative Development Teams (New!)
+
+OpenCode Tools now supports **parallel, event-driven autonomous development teams**:
+
+### Real-Time Autonomous Teams
+- **Dynamic team formation** from project requirements
+- **Multiple agents working simultaneously** on different tasks
+- **Intelligent task routing** based on capabilities and workload
+- **Automatic team health monitoring** with recovery
+- **Role-based collaboration** with specialized agents
+
+### Parallel State Monitoring
+- **Continuous security monitoring** (vulnerability scanning, dependency audits)
+- **Compliance monitoring** (SOX, GDPR, PCI-DSS support)
+- **Observability metrics** (performance, errors, throughput)
+- **Automatic escalation** to human operators when thresholds exceeded
+- **Background execution** while other agents work
+
+### Team Collaboration
+- **Agent-to-agent communication** via secure messaging
+- **Help request system** with capability-based routing
+- **Review coordination** with multi-party approval workflows
+- **Issue escalation** with severity levels and context
+- **Broadcast messaging** for team announcements
+
+### Evidence Collection
+- **Automatic evidence collection** from all system events
+- **Cryptographic signing** (RSA-SHA256) for tamper-proof audit trails
+- **Evidence chain verification** for compliance
+- **Compliance package export** for regulatory audits
+- **Full traceability** of all decisions and actions
+
+### Quick Start with Teams
 
 ```bash
-# Install globally from npm (when published)
-npm install -g opencode-tools
+# Execute project with full team collaboration
+opencode-tools orchestrate --project "MyApp" --mode full
 
-# Or install from source
-git clone https://github.com/opencode/ai-tool.git
-cd opencode-tools
-npm install -g .
+# Dedicated Foundry TUI (new)
+npm run foundry:tui
 ```
+
+### Configuration
+
+Foundry collaboration is wired through runtime components in `src/foundry/integration/collaboration-bridge.ts` and `src/cowork/*`.
+
+Cowork runtime config is loaded via `src/cowork/config/loader.ts` and can be provided through environment variables:
+
+```bash
+COWORK_PERSISTENCE_CONNECTION_STRING=postgres://localhost:5432/opencode
+COWORK_PERSISTENCE_MAX_CONNECTIONS=20
+COWORK_PERSISTENCE_IDLE_TIMEOUT_MS=10000
+COWORK_PERSISTENCE_CONNECTION_TIMEOUT_MS=30000
+COWORK_PERSISTENCE_SSL=false
+COWORK_PERSISTENCE_AUTO_MIGRATE=true
+COWORK_PERSISTENCE_REQUIRED=false
+COWORK_TENANT_ID=default
+COWORK_TENANT_NAME="Default Tenant"
+COWORK_TENANT_OWNER_ID=default-owner
+
+COWORK_COLLABORATION_ENABLED=true
+COWORK_COLLABORATION_MAX_EDITORS=8
+COWORK_COLLABORATION_CONFLICT_WINDOW_MS=300000
+
+COWORK_WORKFLOW_DEFAULT_TIMEOUT_MS=300000
+COWORK_WORKFLOW_MAX_STEPS=50
+COWORK_WORKFLOW_CHECKPOINT_INTERVAL_MS=60000
+
+COWORK_SECURITY_ENFORCE_RBAC=true
+COWORK_SECURITY_REDACT_SECRETS=true
+COWORK_SECURITY_AUDIT_RETENTION_DAYS=90
+
+COWORK_LLM_PROVIDER=openai
+OPENAI_API_KEY=<redacted>
+OPENAI_MODEL=gpt-4o-mini
+```
+
+See `docs/FOUNDRY_COWORK_INTEGRATION_GUIDE.md` for API-level examples.
+
+If you need a fail-fast production posture, set `COWORK_PERSISTENCE_REQUIRED=true`. When enabled, Cowork/Foundry orchestration will fail startup if Postgres persistence cannot be initialized instead of silently continuing in memory-only mode.
 
 ## Quick Start
 
-### Command Line Interface
-
 ```bash
-# Research a company
-opencode-tools research "Acme Corp" --industry "fintech"
+# Install dependencies
+npm install
 
-# Generate documentation
-opencode-tools docs ./research-output.json
+# Build
+npm run build
 
-# Create architecture
-opencode-tools architect ./prd.md
+# Launch TUI
+npm run tui
 
-# Launch interactive TUI
-opencode-tools tui
+# Launch dedicated Foundry TUI
+npm run foundry:tui
 
-# Full orchestration mode (all phases)
-opencode-tools orchestrate --project "MyApp" --mode full
+# Run Foundry orchestration from CLI
+npm run build && opencode-tools orchestrate --project "MyApp"
 ```
 
-### Short Alias
+Short alias is also available after global install:
 
 ```bash
-# All commands work with 'oct' shorthand
-oct research "Acme Corp"
 oct orchestrate --project "MyApp"
 ```
 
-### Local Development
+## CLI Commands
 
 ```bash
-# Install dependencies
-npm install
+# Foundry orchestration entry
+opencode-tools orchestrate --project "MyApp" --mode full
+opencode-tools orchestrate --project "MyApp" --mode research
 
-# Build the project
+# Interactive TUI
+opencode-tools tui
+
+# Cowork system
+opencode-tools cowork list
+opencode-tools cowork run <command> [args...]
+opencode-tools cowork agents
+opencode-tools cowork plugins
+
+# MCP server
+opencode-tools mcp
+
+# Manual integration helper
+opencode-tools integrate
+
+# Runtime wiring verification
+opencode-tools verify
+opencode-tools --verify
+
+# Deliverable scope policy check
+npm run validate:deliverable-scope
+
+# Dedicated Foundry TUI
+npm run foundry:tui
+```
+
+Notes:
+
+- `orchestrate` executes via Foundry orchestrator flow and supports `--mode research|docs|architect|code|full`.
+- Mode presets currently tune iteration and quality-gate behavior (`research/docs` skip gates, `architect/code/full` run gates).
+- Deliverable scope is enforced in strict mode by default and reported in Foundry execution output.
+- `cowork` commands operate through loaded plugins and native agent config.
+- `verify` checks Foundry/Cowork wiring, bridge health, and runtime alias resolution (`--verify` is supported for compatibility).
+- Foundry collaboration API method is `executeWithTeam(request)` in `src/foundry/integration/collaboration-bridge.ts`.
+- Monitoring API surface is `startMonitoring`, `pauseMonitoring`, `resumeMonitoring`, `stopMonitoring`, and `getMonitoringReport` in `src/cowork/monitoring/parallel-state-monitor.ts`.
+- Evidence export API is `exportEvidencePackage(filter)` plus `verifyEvidenceChain()` in `src/cowork/evidence/collector.ts`.
+- `pdf` command now validates generated bytes and fails fast if the payload is empty or not a valid PDF header.
+- Additional commands like `research`, `docs`, and `architect` exist, with depth depending on subsystem maturity.
+
+## Development
+
+```bash
+# TypeScript build
 npm run build
 
-# Run the interactive TUI
-npm run tui
-
-# Run tests
-npm test
-```
-
-## Project Structure
-
-```
-opencode-tools/
-├── agents/           # Agent implementations
-├── prompts/          # Prompt templates
-├── mcp/              # Model control patterns
-├── templates/        # Document templates
-├── artifacts/        # Generated outputs
-├── scripts/          # Helper scripts
-├── tests/            # Test suites
-└── docs/             # Documentation
-```
-
-## Agents
-
-### Research Agent
-
-The Research Agent automates gathering context about clients, their industries, competitors, and technology stacks. It is now a fully production-ready agent with robust validation and persistence.
-
-**Usage:**
-Access via the TUI main menu. See [RESEARCH_AGENT_GUIDE.md](docs/RESEARCH_AGENT_GUIDE.md) for details.
-
-**Features:**
-- Company and industry analysis
-- Competitor identification and analysis
-- Technology stack assessment
-- Risk and opportunity identification
-- Cited sources and references
-
-### Documentation Agent
-
-The Documentation Agent creates client-facing artifacts including PRDs, SOWs, and delivery requirements.
-
-**Usage:**
-```bash
-npm run docs -- --input "research-dossier.json" --type "prd" --output "project-prd.md"
-```
-
-**Features:**
-- PRD generation from research data
-- SOW creation with scope and timeline
-- Delivery requirements documentation
-- Template-based document generation
-
-### Code Generation Agent
-
-The Code Generation Agent scaffolds projects and implements features based on architecture and requirements.
-
-**Usage:**
-```bash
-npm run codegen -- --architecture "architecture.json" --feature "user-auth" --output "./src"
-```
-
-**Features:**
-- Project scaffolding
-- Feature implementation
-- Test generation
-- CI/CD configuration
-
-## Development Setup
-
-### Prerequisites
-- Node.js 18+ 
-- npm 8+
-- TypeScript 5.x
-
-### Initial Setup
-```bash
-# Clone the repository
-git clone https://github.com/opencode/ai-tool.git
-cd opencode-tools
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-```
-
-### Development Commands
-
-```bash
-# Run in development mode (with ts-node)
+# TUI dev run
 npm run dev
 
-# Run full validation (lint + build + test)
-npm run validate
-
-# Lint code
+# Lint
 npm run lint
 
-# Auto-fix linting issues
-npm run lint:fix
-
-# TypeScript type check only
+# Typecheck
 npx tsc --noEmit
+
+# Deliverable scope policy
+npm run validate:deliverable-scope
+
+# Full validation (lint + build + full tests)
+npm run validate
 ```
-
-### Code Style and Conventions
-
-OpenCode Tools follows strict TypeScript conventions:
-
-- **TypeScript**: Strict mode enabled with `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`
-- **Imports**: Absolute imports only (no relative paths like `../../`)
-- **Naming**: PascalCase for classes, camelCase for functions/methods, UPPER_SNAKE_CASE for constants
-- **Types**: Prefer interfaces over type aliases for object shapes, explicit return types on public functions
-- **Errors**: Custom error classes extending `BaseError` with metadata
-- **Validation**: Zod schemas for all inputs (parse, don't validate)
-- **Async**: Always use async/await, never raw Promises
-
-See [AGENTS.md](./AGENTS.md) for comprehensive code style guidelines.
-
-### Testing Strategy
-
-```bash
-# Run all tests with coverage
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run specific test file
-npm test -- agents/research/research-agent.test.ts
-
-# Run tests with coverage report
-npm run test:coverage
-
-# Run only unit tests
-npm run test:unit
-
-# Run only integration tests  
-npm run test:integration
-
-# Run end-to-end tests
-npm run test:e2e
-
-# Run security tests
-npm run test:security
-
-# Run performance tests
-npm run test:performance
-
-# Run all test types
-npm run test:all
-```
-
-**Coverage Requirements** (enforced in CI/CD):
-- Global: 70% branches, functions, lines, statements
-- `./src/`: 80% all metrics  
-- `./agents/`: 75% all metrics
-
-**Test File Organization**:
-- Unit tests co-located with source: `research-agent.ts` + `research-agent.test.ts`
-- Integration tests: `tests/integration/`
-- E2E tests: `tests/e2e/`
-- Test utilities: `tests/utils/`
-
-### CI/CD Pipeline
-
-All changes go through comprehensive testing:
-
-1. **Lint & Security**: ESLint validation, TypeScript compilation, npm audit
-2. **Unit Tests**: Parallel testing by agent (research, docs, codegen, qa, etc.)
-3. **Integration Tests**: Real service integrations with Redis, databases
-4. **E2E Tests**: Full workflow validation  
-5. **Security Tests**: OWASP, CWE vulnerability scanning
-6. **Performance Tests**: Benchmarking and load testing
-7. **Mutation Testing**: Code quality validation
-8. **Coverage Analysis**: Combined coverage reporting with Codecov
-
-See [`.github/workflows/test-pipeline.yml`](.github/workflows/test-pipeline.yml) for complete pipeline configuration.
-
-### Configuration Files
-
-- **TypeScript**: `tsconfig.json` - Strict mode, ES2020 target, commonjs modules
-- **ESLint**: `.eslintrc.js` - TypeScript rules, no unused vars, no explicit any
-- **Jest**: `jest.config.js` - Coverage thresholds, module name mapping, test patterns
-- **CI/CD**: `.github/workflows/test-pipeline.yml` - Multi-stage validation pipeline
-
-### Agent Development
-
-When building or modifying agents:
-
-1. Follow the established [AGENTS.md](./AGENTS.md) coding standards
-2. Use Zod schemas for all inputs with strict validation
-3. Implement proper error handling with custom error classes
-4. Add comprehensive unit tests (minimum 75% coverage)
-5. Include integration tests for external dependencies
-6. Update relevant documentation
-7. Ensure backward compatibility when possible
-8. Add audit logging for agent actions
-
-### Contributing Guidelines
-
-1. **Fork and Branch**: Create feature branch from `develop`
-2. **Code Quality**: Follow all linting and type checking rules
-3. **Testing**: Add tests for all new functionality
-4. **Documentation**: Update docs for public APIs
-5. **Pull Request**: Use format `type(scope): description`
-6. **Review**: Address all reviewer feedback
-7. **Merge**: Only after CI passes and approval received
-
-**Branch Naming**:
-- Features: `feature/add-oauth-authentication`
-- Bug fixes: `fix/research-timeout-error`
-- Documentation: `docs/update-api-reference`
-
-**Commit Message Format**:
-```bash
-git commit -m "feat(auth): implement JWT authentication"
-git commit -m "fix(research): resolve web scraping timeout"
-git commit -m "test(security): add OAuth validation tests"
-```
-
-**PR Requirements**:
-- All CI checks passing
-- Code coverage maintained
-- Security review for agent changes
-- Documentation updated
-- 1+ maintainer approval
-
-See [AGENTS.md](./AGENTS.md) for comprehensive development guidelines.
-
-## Configuration
-
-### Model Control Patterns (MCP)
-
-Configure agent behavior in `mcp/{agent}/v1.yaml`:
-
-```yaml
-temperature: 0.0
-max_tokens: 1500
-external_tools:
-  - webfetch
-  - search
-```
-
-### Prompt Templates
-
-Customize agent prompts in `prompts/{agent}/v1/`:
-
-- `research-dossier.md` - Research agent instructions
-- `prd-from-dossier.md` - Documentation agent instructions
-- `scaffold-project.md` - Code generation instructions
 
 ## Testing
 
-Run the test suite:
-
 ```bash
+# Standard
 npm test
+
+# Segmented suites
+npm run test:unit
+npm run test:integration
+npm run test:e2e
+npm run test:security
+
+# Full pipeline
+npm run test:all
+
+# Cowork Postgres integration tests (requires Docker)
+npx jest tests/integration/cowork/persistence-and-eventing.integration.test.ts --runInBand
 ```
 
-Run tests with coverage:
+`test:security` currently runs with `--passWithNoTests`, so it exits cleanly when no dedicated security tests are present.
 
-```bash
-npm run test:coverage
-```
+## Architecture Map
+
+- CLI entry: `src/cli.ts`
+- TUI entry: `src/tui-app.ts`
+- Foundry runtime bridge: `src/foundry/*`
+- Cowork runtime: `src/cowork/*`
+- Agent implementations: `agents/*`
+- MCP tool server: `tools/mcp-server.ts`
+
+## Governance and Security
+
+- Policy/gatekeeping: `src/governance/*`
+- Review workflows: `src/review/*`
+- Secret redaction: `src/security/*`
+- Audit/runtime trace layers: `src/runtime/*`
+
+## Documentation
+
+- Developer guide: `AGENTS.md`
+- Integration: `INTEGRATION_GUIDE.md`
+- TUI integration notes: `TUI_INTEGRATION.md`
+- Foundry implementation notes: `FOUNDRY_IMPLEMENTATION_SUMMARY.md`
+- **Collaborative Teams Guide**: `docs/FOUNDRY_COWORK_INTEGRATION_GUIDE.md`
+- **Foundry TUI Guide**: `docs/FOUNDRY_TUI_GUIDE.md`
+- **Cowork Workspace Guide**: `docs/COWORK_SPACE_GUIDE.md`
+- **Cowork Test Hardening Notes**: `docs/COWORK_TEST_FIXES.md`
+- **Production Deliverable Policy**: `docs/PRODUCTION_DELIVERABLE_POLICY.md`
+- **API Reference**: `docs/API_REFERENCE.md`
+- **Implementation Summary**: `docs/IMPLEMENTATION_SUMMARY.md`
+- **Cowork Persistence/Eventing/Workflows (Phase 1)**: `docs/COWORK_PERSISTENCE_EVENTING_WORKFLOWS.md`
+- Enterprise backlog and roadmap: `docs/ENTERPRISE_GAP_BACKLOG.md`
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Run the test suite
-6. Submit a pull request
+1. Create a branch from `develop`.
+2. Implement focused changes.
+3. Run `npm run validate`.
+4. Update docs for behavior changes.
+5. Open PR with test evidence and risk notes.
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT - see `LICENSE`.

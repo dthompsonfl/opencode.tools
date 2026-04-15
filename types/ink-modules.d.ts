@@ -1,0 +1,9 @@
+declare module 'ink-gradient';
+declare module 'ink-box';
+declare module 'ink-divider';
+declare module 'ink-link';
+declare module 'ink-spinner';
+declare module 'ink-select-input';
+declare module 'ink-text-input';
+declare module 'ink-table';
+declare module 'ink-big-text';

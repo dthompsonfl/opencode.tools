@@ -38,18 +38,23 @@ exports.replayRun = replayRun;
 exports.checkReproducibility = checkReproducibility;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const run_context_1 = require("../src/runtime/run-context");
 /**
  * Records every tool call for deterministic replay.
  */
 async function logToolCall(runId, toolName, inputs, outputs) {
-    const runDir = path.join(process.cwd(), 'runs', runId);
+    const context = (0, run_context_1.resolveRunContext)(runId);
+    const runDir = path.join(process.cwd(), 'runs', context.runId);
     if (!fs.existsSync(runDir)) {
         fs.mkdirSync(runDir, { recursive: true });
     }
     const logPath = path.join(runDir, 'manifest.json');
+    const timestamp = new Date().toISOString();
     const entry = {
-        timestamp: new Date().toISOString(),
+        runId: context.runId,
+        timestamp,
         toolName,
+        provenance: (0, run_context_1.buildProvenance)(context.source, timestamp),
         inputs,
         outputs
     };
@@ -59,7 +64,7 @@ async function logToolCall(runId, toolName, inputs, outputs) {
     }
     manifest.push(entry);
     fs.writeFileSync(logPath, JSON.stringify(manifest, null, 2));
-    return { success: true, message: "Tool call logged." };
+    return { success: true, runId: context.runId, message: "Tool call logged." };
 }
 /**
  * Replays a specific run using cached tool outputs.

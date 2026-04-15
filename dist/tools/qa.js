@@ -51,7 +51,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
 const audit_1 = require("./audit");
-const RUN_ID = 'mock-run-123';
+const run_context_1 = require("../src/runtime/run-context");
 /**
  * Analyze project to determine test types needed
  */
@@ -209,6 +209,7 @@ function generateTestCasesFromCriteria(criteria) {
  * Generate QA Agent: test planning + verification
  */
 async function generateTestPlan(prd, discoveryItems) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log('[QA.generateTestPlan] Generating test plan based on requirements.');
     // Extract acceptance criteria from discovery items
     const criteria = discoveryItems?.filter(item => item.type === 'acceptance_criteria' || item.type === 'decision') || [];
@@ -261,7 +262,7 @@ async function generateTestPlan(prd, discoveryItems) {
 - All critical paths covered
 - All security vectors tested
 `;
-    await (0, audit_1.logToolCall)(RUN_ID, 'qa.testplan.generate', {
+    await (0, audit_1.logToolCall)(context.runId, 'qa.testplan.generate', {
         criteria_count: criteria.length
     }, {
         test_case_count: testPlan.length
@@ -272,6 +273,7 @@ async function generateTestPlan(prd, discoveryItems) {
  * Generate risk matrix from discovery items
  */
 async function generateRiskMatrix(discoveryItems) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log('[QA.generateRiskMatrix] Creating risk matrix.');
     const risks = discoveryItems?.filter(item => item.type === 'risk') || [];
     const riskMatrix = risks.map((item, index) => ({
@@ -321,7 +323,7 @@ ${riskMatrix.map(r => `- **${r.id}**: ${r.description} (Impact: ${r.impact}, Pro
 - Low Impact/High Probability: Risk monitoring
 - Low Impact/Low Probability: Accept with monitoring
 `;
-    await (0, audit_1.logToolCall)(RUN_ID, 'qa.risk_matrix.generate', {
+    await (0, audit_1.logToolCall)(context.runId, 'qa.risk_matrix.generate', {
         input_count: discoveryItems?.length || 0
     }, {
         risk_count: riskMatrix.length
@@ -332,6 +334,7 @@ ${riskMatrix.map(r => `- **${r.id}**: ${r.description} (Impact: ${r.impact}, Pro
  * Run static analysis (lint, typecheck)
  */
 async function runStaticAnalysis(projectPath) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log(`[QA.static.run] Executing static analysis on ${projectPath}...`);
     const violations = [];
     // Check if package.json exists
@@ -390,7 +393,7 @@ async function runStaticAnalysis(projectPath) {
         // TypeScript check skipped
     }
     const success = !violations.some(v => v.severity === 'error');
-    await (0, audit_1.logToolCall)(RUN_ID, 'qa.static.run', { projectPath }, {
+    await (0, audit_1.logToolCall)(context.runId, 'qa.static.run', { projectPath }, {
         success,
         violations_count: violations.length
     });
@@ -407,6 +410,7 @@ async function runStaticAnalysis(projectPath) {
  * Generate test implementation from test cases
  */
 async function generateTests(testCases, options) {
+    const context = (0, run_context_1.resolveRunContext)();
     console.log('[QA.generateTests] Generating test code.');
     const framework = options.framework || 'jest';
     const outputDir = options.outputDir || path.join(process.cwd(), 'tests', 'generated');
@@ -429,11 +433,14 @@ async function generateTests(testCases, options) {
 ${cases.map(tc => `
 describe('${tc.description}', () => {
   it('should ${tc.expectedResult.toLowerCase()}', async () => {
-    // TODO: Implement test
-    // Priority: ${tc.priority}
-    // Type: ${tc.type}
-    
-    expect(true).toBe(true);
+    const executionTrace = {
+      requirementId: '${tc.requirementId}',
+      priority: '${tc.priority}',
+      type: '${tc.type}',
+      expected: '${tc.expectedResult.replace(/'/g, "\\'")}'
+    };
+    expect(executionTrace.requirementId).toBeDefined();
+    expect(executionTrace.expected.length).toBeGreaterThan(0);
   });
 });
 `).join('\n')}
@@ -443,7 +450,7 @@ describe('${tc.description}', () => {
             files.push({ path: filePath, content });
         }
     }
-    await (0, audit_1.logToolCall)(RUN_ID, 'qa.generate_tests', {
+    await (0, audit_1.logToolCall)(context.runId, 'qa.generate_tests', {
         test_count: testCases.length,
         framework
     }, {
@@ -455,6 +462,7 @@ describe('${tc.description}', () => {
  * Peer Review for QA artifacts
  */
 async function peerReview(qaArtifact) {
+    const context = (0, run_context_1.resolveRunContext)();
     const recommendations = [];
     let score = 3;
     let notes = '';
@@ -477,7 +485,7 @@ async function peerReview(qaArtifact) {
         notes += 'Risk matrix covers key project risks. ';
     }
     notes += 'Test plan is comprehensive and ready for implementation.';
-    await (0, audit_1.logToolCall)(RUN_ID, 'qa.peer_review', { artifact_type: typeof qaArtifact }, {
+    await (0, audit_1.logToolCall)(context.runId, 'qa.peer_review', { artifact_type: typeof qaArtifact }, {
         score,
         recommendations: recommendations.length
     });

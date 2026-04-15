@@ -1,0 +1,59 @@
+{
+  "name": "@foundry/foundry-tui",
+  "version": "1.0.0",
+  "description": "Foundry Interactive TUI - Chat-Based CTO Orchestration System",
+  "main": "dist/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/app.tsx",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "demo": "tsx src/demo.ts"
+  },
+  "keywords": [
+    "foundry",
+    "tui",
+    "terminal",
+    "orchestration",
+    "cto",
+    "agents",
+    "chat"
+  ],
+  "author": "Foundry Team",
+  "license": "MIT",
+  "dependencies": {
+    "ink": "^4.4.1",
+    "ink-text-input": "^5.0.1",
+    "ink-divider": "^4.0.0",
+    "ink-spinner": "^5.0.0",
+    "ink-select-input": "^6.0.0",
+    "react": "^18.2.0",
+    "zod": "^3.22.4",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.0",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.1.0",
+    "tsx": "^4.6.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}
